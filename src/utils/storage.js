@@ -41,3 +41,31 @@ export const deleteProject = (projectId) => {
   const filteredProjects = projects.filter(p => p.id !== projectId);
   saveProjects(filteredProjects);
 };
+
+export const getAppSettings = () => {
+  try {
+    const settings = localStorage.getItem('appSettings');
+    return settings ? JSON.parse(settings) : {
+      currency: 'PKR',
+      numberFormat: true,
+      theme: 'light',
+      dateFormat: 'YYYY-MM-DD',
+    };
+  } catch (error) {
+    console.error('Error loading app settings:', error);
+    return {
+      currency: 'PKR',
+      numberFormat: true,
+      theme: 'light',
+      dateFormat: 'YYYY-MM-DD',
+    };
+  }
+};
+
+export const saveAppSettings = (settings) => {
+  try {
+    localStorage.setItem('appSettings', JSON.stringify(settings));
+  } catch (error) {
+    console.error('Error saving app settings:', error);
+  }
+};
