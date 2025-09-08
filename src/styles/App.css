@@ -1,13 +1,10 @@
 .App {
   text-align: left;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
 .main-content {
   flex: 1;
-  margin-top: 64px; /* Height of the app bar */
 }
 
 /* Custom scrollbar */
