@@ -83,3 +83,30 @@ export const generateScurveData = (targets) => {
     };
   });
 };
+
+export const calculateProjectHealth = (project) => {
+  const { lagPercent, riskLevel } = calculateKpisForProject(project);
+  const financials = calculateFinancialsForProject(project);
+  
+  let healthScore = 100;
+  
+  // Deduct points based on lag
+  healthScore -= Math.min(lagPercent * 2, 50);
+  
+  // Deduct points based on cost variance (if negative)
+  if (financials.costVariance < 0) {
+    healthScore -= Math.min(Math.abs(financials.costVariance) / project.caValue * 100, 25);
+  }
+  
+  // Deduct points based on slippage
+  if (financials.slippage > 0) {
+    healthScore -= Math.min(financials.slippage / project.caValue * 100, 15);
+  }
+  
+  // Deduct points based on receivables
+  if (financials.receivable > 0) {
+    healthScore -= Math.min(financials.receivable / project.caValue * 100, 10);
+  }
+  
+  return Math.max(0, Math.round(healthScore));
+};
