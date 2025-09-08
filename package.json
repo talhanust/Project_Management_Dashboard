@@ -2,7 +2,6 @@
   "name": "project-management-dashboard",
   "version": "1.0.0",
   "description": "Advanced project management dashboard with analytics",
-  "homepage": "https://project-management-dashboard-roan-xi.vercel.app/",
   "private": true,
   "dependencies": {
     "@mui/material": "^5.14.0",
