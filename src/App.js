@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
+import { AppProvider } from './contexts/AppContext';
 import Dashboard from './components/Dashboard';
 import ProjectPlanning from './components/ProjectPlanning';
 import ProjectMonitoring from './components/ProjectMonitoring';
@@ -10,151 +11,98 @@ import AIInsights from './components/AIInsights';
 import ExecutiveReports from './components/ExecutiveReports';
 import Settings from './components/Settings';
 import Navigation from './components/Navigation';
-import { getProjects, saveProjects } from './utils/storage';
 import './styles/App.css';
 
 const theme = createTheme({
   palette: {
-    mode: 'light',
     primary: {
       main: '#2c3e50',
+      light: '#3c4c5e',
+      dark: '#1c2a38',
     },
     secondary: {
       main: '#3498db',
+      light: '#5faee3',
+      dark: '#1d6fa5',
     },
     background: {
       default: '#f8f9fa',
+      paper: '#ffffff',
+    },
+    success: {
+      main: '#27ae60',
+      light: '#52c47e',
+      dark: '#1e7d45',
+    },
+    warning: {
+      main: '#f39c12',
+      light: '#f5b143',
+      dark: '#aa6d09',
+    },
+    error: {
+      main: '#e74c3c',
+      light: '#ec7063',
+      dark: '#a2352a',
     },
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h4: {
+      fontWeight: 700,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
   },
   shape: {
     borderRadius: 8,
   },
+  components: {
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)',
+          border: '1px solid #eaeaea',
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 500,
+        },
+      },
+    },
+  },
 });
 
 function App() {
-  const [projects, setProjects] = useState([]);
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [darkMode, setDarkMode] = useState(false);
-
-  useEffect(() => {
-    // Load projects from localStorage on initial load
-    const savedProjects = getProjects();
-    if (savedProjects) {
-      setProjects(savedProjects);
-    }
-    
-    // Load theme preference
-    const savedTheme = localStorage.getItem('darkMode');
-    if (savedTheme) {
-      setDarkMode(JSON.parse(savedTheme));
-    }
-  }, []);
-
-  useEffect(() => {
-    // Save projects to localStorage whenever they change
-    saveProjects(projects);
-  }, [projects]);
-
-  useEffect(() => {
-    // Save theme preference
-    localStorage.setItem('darkMode', JSON.stringify(darkMode));
-  }, [darkMode]);
-
-  const addProject = (project) => {
-    const newProject = {
-      ...project,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-    };
-    setProjects([...projects, newProject]);
-  };
-
-  const updateProject = (updatedProject) => {
-    setProjects(projects.map(p => 
-      p.id === updatedProject.id ? updatedProject : p
-    ));
-  };
-
-  const deleteProject = (projectId) => {
-    setProjects(projects.filter(p => p.id !== projectId));
-  };
-
-  const toggleTheme = () => {
-    setDarkMode(!darkMode);
-  };
-
   return (
-    <ThemeProvider theme={darkMode ? createTheme({
-      ...theme,
-      palette: {
-        mode: 'dark',
-        primary: {
-          main: '#3498db',
-        },
-        secondary: {
-          main: '#2ecc71',
-        },
-        background: {
-          default: '#121212',
-          paper: '#1e1e1e',
-        },
-      },
-    }) : theme}>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <Box sx={{ display: 'flex' }}>
-          <Navigation darkMode={darkMode} toggleTheme={toggleTheme} />
-          <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
-            <Routes>
-              <Route path="/" element={
-                <Dashboard 
-                  projects={projects} 
-                  selectedProject={selectedProject}
-                  setSelectedProject={setSelectedProject}
-                />
-              } />
-              <Route path="/planning" element={
-                <ProjectPlanning 
-                  projects={projects}
-                  addProject={addProject}
-                  updateProject={updateProject}
-                  deleteProject={deleteProject}
-                  selectedProject={selectedProject}
-                  setSelectedProject={setSelectedProject}
-                />
-              } />
-              <Route path="/monitoring" element={
-                <ProjectMonitoring 
-                  projects={projects}
-                  selectedProject={selectedProject}
-                  setSelectedProject={setSelectedProject}
-                />
-              } />
-              <Route path="/insights" element={
-                <AIInsights 
-                  projects={projects}
-                  selectedProject={selectedProject}
-                />
-              } />
-              <Route path="/reports" element={
-                <ExecutiveReports 
-                  projects={projects}
-                  selectedProject={selectedProject}
-                />
-              } />
-              <Route path="/settings" element={
-                <Settings 
-                  darkMode={darkMode}
-                  toggleTheme={toggleTheme}
-                />
-              } />
-            </Routes>
+      <AppProvider>
+        <Router>
+          <Box sx={{ display: 'flex' }}>
+            <Navigation />
+            <Box component="main" sx={{ flexGrow: 1, p: 3, width: { md: `calc(100% - 240px)` } }}>
+              <Box sx={{ mt: 8 }}>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/planning" element={<ProjectPlanning />} />
+                  <Route path="/monitoring" element={<ProjectMonitoring />} />
+                  <Route path="/insights" element={<AIInsights />} />
+                  <Route path="/reports" element={<ExecutiveReports />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Routes>
+              </Box>
+            </Box>
           </Box>
-        </Box>
-      </Router>
+        </Router>
+      </AppProvider>
     </ThemeProvider>
   );
 }
