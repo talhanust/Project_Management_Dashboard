@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { Box } from '@mui/material';
 import Dashboard from './components/Dashboard';
 import ProjectPlanning from './components/ProjectPlanning';
 import ProjectMonitoring from './components/ProjectMonitoring';
@@ -104,9 +105,9 @@ function App() {
     }) : theme}>
       <CssBaseline />
       <Router>
-        <div className="App">
+        <Box sx={{ display: 'flex' }}>
           <Navigation darkMode={darkMode} toggleTheme={toggleTheme} />
-          <div className="main-content">
+          <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
             <Routes>
               <Route path="/" element={
                 <Dashboard 
@@ -151,8 +152,8 @@ function App() {
                 />
               } />
             </Routes>
-          </div>
-        </div>
+          </Box>
+        </Box>
       </Router>
     </ThemeProvider>
   );
