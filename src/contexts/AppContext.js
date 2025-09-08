@@ -1,9 +1,63 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { appReducer, initialState } from '../reducers/appReducer';
-import { getProjects, saveProjects } from '../utils/storage';
 
+// Initial state
+const initialState = {
+  projects: [],
+  selectedProject: null,
+  darkMode: false
+};
+
+// Reducer function
+const appReducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_PROJECTS':
+      return { ...state, projects: action.payload };
+    case 'ADD_PROJECT':
+      return { ...state, projects: [...state.projects, action.payload] };
+    case 'UPDATE_PROJECT':
+      return {
+        ...state,
+        projects: state.projects.map(project =>
+          project.id === action.payload.id ? action.payload : project
+        )
+      };
+    case 'DELETE_PROJECT':
+      return {
+        ...state,
+        projects: state.projects.filter(project => project.id !== action.payload)
+      };
+    case 'SET_SELECTED_PROJECT':
+      return { ...state, selectedProject: action.payload };
+    case 'SET_DARK_MODE':
+      return { ...state, darkMode: action.payload };
+    default:
+      return state;
+  }
+};
+
+// Local storage functions
+const getProjects = () => {
+  try {
+    const projects = localStorage.getItem('projects');
+    return projects ? JSON.parse(projects) : null;
+  } catch (error) {
+    console.error('Error loading projects from localStorage:', error);
+    return null;
+  }
+};
+
+const saveProjects = (projects) => {
+  try {
+    localStorage.setItem('projects', JSON.stringify(projects));
+  } catch (error) {
+    console.error('Error saving projects to localStorage:', error);
+  }
+};
+
+// Create context
 const AppContext = createContext();
 
+// Custom hook to use the context
 export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) {
@@ -12,22 +66,24 @@ export const useApp = () => {
   return context;
 };
 
+// Context provider
 export const AppProvider = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
+  // Load projects from localStorage on mount
   useEffect(() => {
-    // Load projects from localStorage
     const projects = getProjects();
     if (projects) {
       dispatch({ type: 'SET_PROJECTS', payload: projects });
     }
   }, []);
 
+  // Save projects to localStorage whenever they change
   useEffect(() => {
-    // Save projects to localStorage whenever they change
     saveProjects(state.projects);
   }, [state.projects]);
 
+  // Context actions
   const addProject = (project) => {
     dispatch({ type: 'ADD_PROJECT', payload: project });
   };
@@ -40,27 +96,29 @@ export const AppProvider = ({ children }) => {
     dispatch({ type: 'DELETE_PROJECT', payload: projectId });
   };
 
-  const addProgress = (projectId, progress) => {
-    dispatch({ type: 'ADD_PROGRESS', payload: { projectId, progress } });
-  };
-
-  const addExpenditure = (projectId, expenditure) => {
-    dispatch({ type: 'ADD_EXPENDITURE', payload: { projectId, expenditure } });
+  const setSelectedProject = (project) => {
+    dispatch({ type: 'SET_SELECTED_PROJECT', payload: project });
   };
 
   const setDarkMode = (isDark) => {
     dispatch({ type: 'SET_DARK_MODE', payload: isDark });
   };
 
+  // Context value
   const value = {
     ...state,
     addProject,
     updateProject,
     deleteProject,
-    addProgress,
-    addExpenditure,
-    setDarkMode,
+    setSelectedProject,
+    setDarkMode
   };
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={value}>
+      {children}
+    </AppContext.Provider>
+  );
 };
+
+export default AppContext;
