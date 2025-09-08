@@ -11,7 +11,6 @@ import AIInsights from './components/AIInsights';
 import ExecutiveReports from './components/ExecutiveReports';
 import Settings from './components/Settings';
 import Navigation from './components/Navigation';
-import './styles/App.css';
 
 const theme = createTheme({
   palette: {
