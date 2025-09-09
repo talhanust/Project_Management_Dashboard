@@ -1,210 +1,217 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Grid,
   Card,
   CardContent,
   Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
-  Chip,
+  Paper,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
-  Assignment as AssignmentIcon,
   TrendingUp as TrendingUpIcon,
-  CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
+  Assignment as AssignmentIcon,
+  Schedule as ScheduleIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
-import { calculateKpisForProject } from '../utils/calculations';
-import BarChart from './Charts/BarChart';
 
 const Dashboard = () => {
-  const { projects, filters, setFilters } = useApp();
-
-  const filteredProjects = projects.filter(project => {
-    if (filters.directorate !== 'All' && project.directorate !== filters.directorate) {
-      return false;
-    }
-    if (filters.status !== 'All' && project.status !== filters.status) {
-      return false;
-    }
-    // Add date range filtering if needed
-    return true;
+  const { projects } = useApp();
+  const [stats, setStats] = useState({
+    total: 0,
+    inProgress: 0,
+    completed: 0,
+    planning: 0
   });
+  const [loading, setLoading] = useState(true);
+  const [recentProjects, setRecentProjects] = useState([]);
 
-  const kpiData = {
-    totalProjects: filteredProjects.length,
-    inProgress: filteredProjects.filter(p => p.status === 'In Progress').length,
-    completed: filteredProjects.filter(p => p.status === 'Completed').length,
-    atRisk: filteredProjects.filter(project => {
-      const { riskLevel } = calculateKpisForProject(project);
-      return riskLevel === 'High' || riskLevel === 'Danger';
-    }).length,
-  };
+  useEffect(() => {
+    if (projects) {
+      // Calculate statistics
+      const total = projects.length;
+      const inProgress = projects.filter(p => p.status === 'In Progress').length;
+      const completed = projects.filter(p => p.status === 'Completed').length;
+      const planning = projects.filter(p => p.status === 'Planning').length;
 
-  const directorateData = filteredProjects.reduce((acc, project) => {
-    if (!acc[project.directorate]) {
-      acc[project.directorate] = 0;
+      setStats({
+        total,
+        inProgress,
+        completed,
+        planning
+      });
+
+      // Get recent projects (last 5)
+      const sortedProjects = [...projects]
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .slice(0, 5);
+
+      setRecentProjects(sortedProjects);
+      setLoading(false);
     }
-    acc[project.directorate]++;
-    return acc;
-  }, {});
+  }, [projects]);
 
-  const chartData = Object.entries(directorateData).map(([name, count]) => ({
-    name,
-    projects: count,
-  }));
-
-  const atRiskProjects = filteredProjects.filter(project => {
-    const { riskLevel } = calculateKpisForProject(project);
-    return riskLevel === 'High' || riskLevel === 'Danger';
-  });
-
-  const KpiCard = ({ title, value, icon, color }) => (
-    <Card elevation={2} sx={{ height: '100%' }}>
-      <CardContent sx={{ textAlign: 'center', p: 3 }}>
-        {React.cloneElement(icon, { sx: { fontSize: 40, mb: 1, color } })}
-        <Typography variant="h4" component="div" gutterBottom>
-          {value}
-        </Typography>
-        <Typography color="text.secondary" variant="h6">
-          {title}
-        </Typography>
-      </CardContent>
-    </Card>
-  );
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box p={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1" fontWeight="bold">
-          Project Management Dashboard
-        </Typography>
-        <Box display="flex" gap={2}>
-          <FormControl sx={{ minWidth: 120 }}>
-            <InputLabel>Directorate</InputLabel>
-            <Select
-              value={filters.directorate}
-              label="Directorate"
-              onChange={(e) => setFilters({ directorate: e.target.value })}
-            >
-              <MenuItem value="All">All Directorates</MenuItem>
-              <MenuItem value="North">North</MenuItem>
-              <MenuItem value="Centre">Centre</MenuItem>
-              <MenuItem value="KPK">KPK</MenuItem>
-              <MenuItem value="Baluchistan">Baluchistan</MenuItem>
-              <MenuItem value="Sindh">Sindh</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl sx={{ minWidth: 120 }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={filters.status}
-              label="Status"
-              onChange={(e) => setFilters({ status: e.target.value })}
-            >
-              <MenuItem value="All">All Status</MenuItem>
-              <MenuItem value="Planning">Planning</MenuItem>
-              <MenuItem value="In Progress">In Progress</MenuItem>
-              <MenuItem value="Completed">Completed</MenuItem>
-              <MenuItem value="Suspended">Suspended</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-      </Box>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Dashboard
+      </Typography>
 
-      {/* KPI Cards */}
-      <Grid container spacing={3} mb={4}>
+      {/* Statistics Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <KpiCard
-            title="Total Projects"
-            value={kpiData.totalProjects}
-            icon={<AssignmentIcon />}
-            color="#2c3e50"
-          />
+          <Card elevation={2}>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <AssignmentIcon color="primary" sx={{ fontSize: 40, mr: 2 }} />
+                <Box>
+                  <Typography color="textSecondary" gutterBottom>
+                    Total Projects
+                  </Typography>
+                  <Typography variant="h4" component="div">
+                    {stats.total}
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
         </Grid>
+
         <Grid item xs={12} sm={6} md={3}>
-          <KpiCard
-            title="In Progress"
-            value={kpiData.inProgress}
-            icon={<TrendingUpIcon />}
-            color="#3498db"
-          />
+          <Card elevation={2}>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <ScheduleIcon color="warning" sx={{ fontSize: 40, mr: 2 }} />
+                <Box>
+                  <Typography color="textSecondary" gutterBottom>
+                    In Progress
+                  </Typography>
+                  <Typography variant="h4" component="div">
+                    {stats.inProgress}
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
         </Grid>
+
         <Grid item xs={12} sm={6} md={3}>
-          <KpiCard
-            title="Completed"
-            value={kpiData.completed}
-            icon={<CheckCircleIcon />}
-            color="#27ae60"
-          />
+          <Card elevation={2}>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <CheckCircleIcon color="success" sx={{ fontSize: 40, mr: 2 }} />
+                <Box>
+                  <Typography color="textSecondary" gutterBottom>
+                    Completed
+                  </Typography>
+                  <Typography variant="h4" component="div">
+                    {stats.completed}
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
         </Grid>
+
         <Grid item xs={12} sm={6} md={3}>
-          <KpiCard
-            title="At Risk"
-            value={kpiData.atRisk}
-            icon={<WarningIcon />}
-            color="#e74c3c"
-          />
+          <Card elevation={2}>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <TrendingUpIcon color="info" sx={{ fontSize: 40, mr: 2 }} />
+                <Box>
+                  <Typography color="textSecondary" gutterBottom>
+                    Planning
+                  </Typography>
+                  <Typography variant="h4" component="div">
+                    {stats.planning}
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
 
-      {/* Charts */}
+      {/* Recent Projects */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
-          <Card elevation={2} sx={{ p: 2, height: 400 }}>
-            <Typography variant="h6" mb={2} fontWeight="bold">
-              Projects by Directorate
+          <Paper elevation={2} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Recent Projects
             </Typography>
-            <BarChart
-              data={chartData}
-              xKey="name"
-              yKey="projects"
-              xAxisLabel="Directorate"
-              yAxisLabel="Number of Projects"
-              fill="#3498db"
-            />
-          </Card>
+            
+            {recentProjects.length === 0 ? (
+              <Alert severity="info">
+                No projects found. Start by creating a new project in the Planning section.
+              </Alert>
+            ) : (
+              <Box>
+                {recentProjects.map((project, index) => (
+                  <Box 
+                    key={project.id || index} 
+                    sx={{ 
+                      p: 2, 
+                      mb: 1, 
+                      border: '1px solid',
+                      borderColor: 'grey.200',
+                      borderRadius: 1
+                    }}
+                  >
+                    <Typography variant="subtitle1" gutterBottom>
+                      {project.name || 'Unnamed Project'}
+                    </Typography>
+                    <Box display="flex" justifyContent="space-between">
+                      <Typography variant="body2" color="textSecondary">
+                        Directorates: {project.directorate || 'Not specified'}
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        color={
+                          project.status === 'Completed' ? 'success.main' :
+                          project.status === 'In Progress' ? 'warning.main' :
+                          project.status === 'Planning' ? 'info.main' : 'textSecondary'
+                        }
+                      >
+                        {project.status || 'Unknown Status'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Paper>
         </Grid>
+
         <Grid item xs={12} md={4}>
-          <Card elevation={2} sx={{ p: 2, height: 400 }}>
-            <Typography variant="h6" mb={2} fontWeight="bold">
-              At-Risk Projects
+          <Paper elevation={2} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Quick Actions
             </Typography>
-            <Box sx={{ maxHeight: 320, overflow: 'auto' }}>
-              {atRiskProjects.length > 0 ? (
-                atRiskProjects.map(project => {
-                  const { lagPercent, riskLevel } = calculateKpisForProject(project);
-                  return (
-                    <Alert 
-                      key={project.id} 
-                      severity={riskLevel === 'Danger' ? 'error' : 'warning'} 
-                      sx={{ mb: 1 }}
-                    >
-                      <Box>
-                        <Typography fontWeight="bold">{project.name}</Typography>
-                        <Typography variant="body2">{project.directorate}</Typography>
-                        <Chip 
-                          label={`Lag: ${lagPercent.toFixed(1)}%`} 
-                          size="small" 
-                          color={riskLevel === 'Danger' ? 'error' : 'warning'}
-                          sx={{ mt: 1 }}
-                        />
-                      </Box>
-                    </Alert>
-                  );
-                })
-              ) : (
-                <Alert severity="success">
-                  No projects are currently at risk!
-                </Alert>
-              )}
+            <Box>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                • Create a new project
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                • View project reports
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                • Monitor ongoing projects
+              </Typography>
+              <Typography variant="body2">
+                • Generate executive reports
+              </Typography>
             </Box>
-          </Card>
+          </Paper>
         </Grid>
       </Grid>
     </Box>
