@@ -37,14 +37,15 @@ const Navigation = () => {
   const location = useLocation();
   const { darkMode, setDarkMode, calculateStatistics } = useApp();
 
-  const stats = calculateStatistics();
+  // Safe calculation of statistics with fallback
+  const stats = calculateStatistics ? calculateStatistics() : { highRisk: 0 };
 
   const menuItems = [
     { 
       text: 'Dashboard', 
       icon: <DashboardIcon />, 
       path: '/',
-      badge: stats.highRisk > 0 ? stats.highRisk : null
+      badge: stats && stats.highRisk > 0 ? stats.highRisk : null
     },
     { text: 'Project Planning', icon: <PlanningIcon />, path: '/planning' },
     { text: 'Project Monitoring', icon: <MonitoringIcon />, path: '/monitoring' },
@@ -52,7 +53,7 @@ const Navigation = () => {
       text: 'AI Insights', 
       icon: <InsightsIcon />, 
       path: '/insights',
-      badge: stats.highRisk > 0 ? stats.highRisk : null
+      badge: stats && stats.highRisk > 0 ? stats.highRisk : null
     },
     { text: 'Executive Reports', icon: <ReportsIcon />, path: '/reports' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
@@ -142,7 +143,7 @@ const Navigation = () => {
           )}
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Project Management Dashboard
-            {stats.highRisk > 0 && (
+            {stats && stats.highRisk > 0 && (
               <Badge 
                 badgeContent={stats.highRisk} 
                 color="error" 
