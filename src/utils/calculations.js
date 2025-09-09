@@ -1,16 +1,27 @@
 // KPI and financial calculations
 
 export const calculateProjectKPIs = (project) => {
+  if (!project) {
+    return {
+      actualRevenue: 0,
+      vettedRevenue: 0,
+      amountReceived: 0,
+      slippage: 0,
+      receivable: 0,
+      expenditures: {}
+    };
+  }
+
   const latestProgress = project.progress && project.progress.length > 0 
     ? project.progress[project.progress.length - 1] 
     : null;
   
-  const actualRevenue = latestProgress ? latestProgress.calculations?.uptoDateActualRevenue || 0 : 0;
-  const vettedRevenue = latestProgress ? latestProgress.calculations?.uptoDateVettedRevenue || 0 : 0;
-  const amountReceived = latestProgress ? latestProgress.calculations?.uptoDateAmountReceived || 0 : 0;
-  const slippage = latestProgress ? latestProgress.calculations?.uptoDateSlippage || 0 : 0;
-  const receivable = latestProgress ? latestProgress.calculations?.uptoDateReceivable || 0 : 0;
-  const expenditures = latestProgress ? latestProgress.expenditures || {} : {};
+  const actualRevenue = latestProgress?.calculations?.uptoDateActualRevenue || 0;
+  const vettedRevenue = latestProgress?.calculations?.uptoDateVettedRevenue || 0;
+  const amountReceived = latestProgress?.calculations?.uptoDateAmountReceived || 0;
+  const slippage = latestProgress?.calculations?.uptoDateSlippage || 0;
+  const receivable = latestProgress?.calculations?.uptoDateReceivable || 0;
+  const expenditures = latestProgress?.expenditures || {};
   
   return {
     actualRevenue,
@@ -23,6 +34,30 @@ export const calculateProjectKPIs = (project) => {
 };
 
 export const calculateRiskLevels = (project, kpis, thresholds) => {
+  if (!project || !kpis || !thresholds) {
+    return {
+      lag: 0,
+      lagPercentage: 0,
+      lagRisk: 'Unknown',
+      scopeCreep: 0,
+      scopeCreepPercentage: 0,
+      scopeCreepRisk: 'Unknown',
+      costVariance: 0,
+      costVarianceRisk: 'Unknown',
+      profitability: 0,
+      profitabilityRisk: 'Unknown',
+      slippage: 0,
+      slippagePercentage: 0,
+      slippageRisk: 'Unknown',
+      receivable: 0,
+      receivablePercentage: 0,
+      receivableRisk: 'Unknown',
+      totalExpenditure: 0,
+      plannedRevenue: 0,
+      actualRevenue: 0
+    };
+  }
+
   // Calculate planned revenue from targets
   const plannedRevenue = project.targets ? 
     project.targets.reduce((sum, target) => sum + (target.value || 0), 0) : 0;
@@ -42,28 +77,32 @@ export const calculateRiskLevels = (project, kpis, thresholds) => {
   const costVariance = (kpis.actualRevenue || 0) - totalExpenditure;
   
   // Calculate profitability
-  const profitability = totalExpenditure > 0 ? ((kpis.actualRevenue || 0) - totalExpenditure) / totalExpenditure * 100 : 0;
+  const profitability = totalExpenditure > 0 ? 
+    ((kpis.actualRevenue || 0) - totalExpenditure) / totalExpenditure * 100 : 0;
   
   // Calculate slippage percentage
-  const slippagePercentage = kpis.actualRevenue > 0 ? (kpis.slippage / kpis.actualRevenue) * 100 : 0;
+  const slippagePercentage = kpis.actualRevenue > 0 ? 
+    (kpis.slippage / kpis.actualRevenue) * 100 : 0;
   
   // Calculate receivable percentage
-  const receivablePercentage = kpis.amountReceived > 0 ? (kpis.receivable / kpis.amountReceived) * 100 : 0;
+  const receivablePercentage = kpis.amountReceived > 0 ? 
+    (kpis.receivable / kpis.amountReceived) * 100 : 0;
   
   // Determine risk levels based on thresholds
   const lagRisk = lagPercentage <= thresholds.lag.low ? 'Low' :
                   lagPercentage <= thresholds.lag.moderate ? 'Moderate' :
                   lagPercentage <= thresholds.lag.high ? 'High' : 'Danger';
   
-  const scopeCreepRisk = scopeCreepPercentage <= thresholds.scopeCreep.low ? 'Low' :
-                         scopeCreepPercentage <= thresholds.scopeCreep.moderate ? 'Moderate' :
-                         scopeCreepPercentage <= thresholds.scopeCreep.high ? 'High' : 'Danger';
+  const scopeCreepRisk = Math.abs(scopeCreepPercentage) <= thresholds.scopeCreep.low ? 'Low' :
+                         Math.abs(scopeCreepPercentage) <= thresholds.scopeCreep.moderate ? 'Moderate' :
+                         Math.abs(scopeCreepPercentage) <= thresholds.scopeCreep.high ? 'High' : 'Danger';
   
   const costVarianceRisk = costVariance >= 0 ? 'Under Budget' : 'Over Budget';
   
-  const profitabilityRisk = profitability >= (project.plannedProfitability || 0) ? 'Excellent' :
-                            profitability >= (project.plannedProfitability || 0) * 0.92 ? 'Satisfactory' :
-                            profitability >= (project.plannedProfitability || 0) * 0.85 ? 'Risk' : 'Danger';
+  const plannedProfitability = project.plannedProfitability || 0;
+  const profitabilityRisk = profitability >= plannedProfitability ? 'Excellent' :
+                            profitability >= plannedProfitability * 0.92 ? 'Satisfactory' :
+                            profitability >= plannedProfitability * 0.85 ? 'Risk' : 'Danger';
   
   const slippageRisk = slippagePercentage <= thresholds.slippage.low ? 'Satisfactory' :
                        slippagePercentage <= thresholds.slippage.moderate ? 'Low' :
@@ -97,13 +136,27 @@ export const calculateRiskLevels = (project, kpis, thresholds) => {
 };
 
 export const calculateProgressPercentage = (project) => {
-  if (!project.caValue || project.caValue === 0) return 0;
+  if (!project || !project.caValue || project.caValue === 0) return 0;
   
   const kpis = calculateProjectKPIs(project);
   return kpis.actualRevenue > 0 ? (kpis.actualRevenue / project.caValue) * 100 : 0;
 };
 
 export const calculateStatistics = (projects, calculateProjectKPIs, calculateRiskLevels, thresholds) => {
+  if (!projects || !Array.isArray(projects)) {
+    return {
+      total: 0,
+      inProgress: 0,
+      completed: 0,
+      planning: 0,
+      highRisk: 0,
+      totalCAValue: 0,
+      totalRevenue: 0,
+      totalExpenditure: 0,
+      totalProfit: 0
+    };
+  }
+
   const total = projects.length;
   const inProgress = projects.filter(p => p.status === 'In Progress').length;
   const completed = projects.filter(p => p.status === 'Completed').length;
