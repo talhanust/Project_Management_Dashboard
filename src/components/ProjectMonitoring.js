@@ -20,7 +20,8 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip
+  Chip,
+  Divider
 } from '@mui/material';
 import { Save as SaveIcon, Add as AddIcon } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
@@ -37,7 +38,7 @@ function TabPanel(props) {
 
 const ProjectMonitoring = () => {
   const [tabValue, setTabValue] = useState(0);
-  const { projects, updateProject, addProgress, addExpenditure, formatCurrency, calculateProjectKPIs } = useApp();
+  const { projects, updateProject, addProgress, addExpenditure, formatCurrency, calculateProjectKPIs, setFilters, filters } = useApp();
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [progressData, setProgressData] = useState({
     previousMonth: {
@@ -55,10 +56,33 @@ const ProjectMonitoring = () => {
     expenditures: {}
   });
 
-  const [filters, setFilters] = useState({
+  const [progressFilters, setProgressFilters] = useState({
     directorate: 'All',
     status: 'All'
   });
+
+  const [financialFilters, setFinancialFilters] = useState({
+    directorate: 'All',
+    status: 'All'
+  });
+
+  const [kpiFilters, setKpiFilters] = useState({
+    directorate: 'All',
+    status: 'All'
+  });
+
+  useEffect(() => {
+    // Load saved progress data if available
+    const savedProgress = localStorage.getItem('progressData');
+    if (savedProgress) {
+      setProgressData(JSON.parse(savedProgress));
+    }
+  }, []);
+
+  useEffect(() => {
+    // Save progress data to localStorage
+    localStorage.setItem('progressData', JSON.stringify(progressData));
+  }, [progressData]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -98,28 +122,28 @@ const ProjectMonitoring = () => {
     const currentMonth = progressData.currentMonth;
 
     // Calculate values
-    const escalationDuringMonth = (parseFloat(currentMonth.workDone) * parseFloat(currentMonth.escalationPercentage)) / 100;
-    const uptoDateActualWorkDone = parseFloat(previousMonth.actualWorkDone) + parseFloat(currentMonth.workDone);
-    const uptoDateEscalation = (parseFloat(previousMonth.actualWorkDone) * parseFloat(previousMonth.escalationPercentage) / 100) + escalationDuringMonth;
+    const escalationDuringMonth = (parseFloat(currentMonth.workDone || 0) * parseFloat(currentMonth.escalationPercentage || 0)) / 100;
+    const uptoDateActualWorkDone = parseFloat(previousMonth.actualWorkDone || 0) + parseFloat(currentMonth.workDone || 0);
+    const uptoDateEscalation = ((parseFloat(previousMonth.actualWorkDone || 0) * parseFloat(previousMonth.escalationPercentage || 0)) / 100) + escalationDuringMonth;
     const uptoDateActualRevenue = uptoDateActualWorkDone + uptoDateEscalation;
-    const uptoDateVettedRevenue = parseFloat(previousMonth.vettedRevenue) + parseFloat(currentMonth.vettedRevenue);
-    const uptoDateAmountReceived = parseFloat(previousMonth.amountReceived) + parseFloat(currentMonth.amountReceived);
+    const uptoDateVettedRevenue = parseFloat(previousMonth.vettedRevenue || 0) + parseFloat(currentMonth.vettedRevenue || 0);
+    const uptoDateAmountReceived = parseFloat(previousMonth.amountReceived || 0) + parseFloat(currentMonth.amountReceived || 0);
     const uptoDateSlippage = uptoDateActualRevenue - uptoDateVettedRevenue;
     const uptoDateReceivable = uptoDateVettedRevenue - uptoDateAmountReceived;
 
     const progress = {
       date: new Date().toISOString(),
       previousMonth: {
-        actualWorkDone: parseFloat(previousMonth.actualWorkDone),
-        escalationPercentage: parseFloat(previousMonth.escalationPercentage),
-        vettedRevenue: parseFloat(previousMonth.vettedRevenue),
-        amountReceived: parseFloat(previousMonth.amountReceived)
+        actualWorkDone: parseFloat(previousMonth.actualWorkDone || 0),
+        escalationPercentage: parseFloat(previousMonth.escalationPercentage || 0),
+        vettedRevenue: parseFloat(previousMonth.vettedRevenue || 0),
+        amountReceived: parseFloat(previousMonth.amountReceived || 0)
       },
       currentMonth: {
-        workDone: parseFloat(currentMonth.workDone),
-        escalationPercentage: parseFloat(currentMonth.escalationPercentage),
-        vettedRevenue: parseFloat(currentMonth.vettedRevenue),
-        amountReceived: parseFloat(currentMonth.amountReceived)
+        workDone: parseFloat(currentMonth.workDone || 0),
+        escalationPercentage: parseFloat(currentMonth.escalationPercentage || 0),
+        vettedRevenue: parseFloat(currentMonth.vettedRevenue || 0),
+        amountReceived: parseFloat(currentMonth.amountReceived || 0)
       },
       calculations: {
         escalationDuringMonth,
@@ -154,16 +178,42 @@ const ProjectMonitoring = () => {
     });
   };
 
-  const handleFilterChange = (field, value) => {
-    setFilters(prev => ({
+  const handleProgressFilterChange = (field, value) => {
+    setProgressFilters(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const filteredProjects = projects.filter(project => {
-    if (filters.directorate !== 'All' && project.directorate !== filters.directorate) return false;
-    if (filters.status !== 'All' && project.status !== filters.status) return false;
+  const handleFinancialFilterChange = (field, value) => {
+    setFinancialFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleKpiFilterChange = (field, value) => {
+    setKpiFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const filteredProgressProjects = projects.filter(project => {
+    if (progressFilters.directorate !== 'All' && project.directorate !== progressFilters.directorate) return false;
+    if (progressFilters.status !== 'All' && project.status !== progressFilters.status) return false;
+    return true;
+  });
+
+  const filteredFinancialProjects = projects.filter(project => {
+    if (financialFilters.directorate !== 'All' && project.directorate !== financialFilters.directorate) return false;
+    if (financialFilters.status !== 'All' && project.status !== financialFilters.status) return false;
+    return true;
+  });
+
+  const filteredKpiProjects = projects.filter(project => {
+    if (kpiFilters.directorate !== 'All' && project.directorate !== kpiFilters.directorate) return false;
+    if (kpiFilters.status !== 'All' && project.status !== kpiFilters.status) return false;
     return true;
   });
 
@@ -176,6 +226,19 @@ const ProjectMonitoring = () => {
     'General Administration',
     'Other Costs'
   ];
+
+  const calculateRiskLevel = (value, thresholds, isPercentage = true) => {
+    if (isPercentage) {
+      if (value <= thresholds.low) return { level: 'Low', color: 'success' };
+      if (value <= thresholds.moderate) return { level: 'Moderate', color: 'warning' };
+      if (value <= thresholds.high) return { level: 'High', color: 'error' };
+      return { level: 'Danger', color: 'error' };
+    } else {
+      // For absolute values, we need different logic
+      // This is a placeholder - you'll need to implement based on your specific requirements
+      return { level: 'Needs Analysis', color: 'default' };
+    }
+  };
 
   return (
     <Box p={3}>
@@ -312,6 +375,13 @@ const ProjectMonitoring = () => {
                       margin="normal"
                     />
                   ))}
+
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                    Section 3 & 4: Calculated Values
+                  </Typography>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    These values will be calculated automatically when you save the progress.
+                  </Alert>
                 </>
               )}
             </Grid>
@@ -324,9 +394,9 @@ const ProjectMonitoring = () => {
               <FormControl fullWidth margin="normal">
                 <InputLabel>Filter by Directorate</InputLabel>
                 <Select
-                  value={filters.directorate}
+                  value={progressFilters.directorate}
                   label="Filter by Directorate"
-                  onChange={(e) => handleFilterChange('directorate', e.target.value)}
+                  onChange={(e) => handleProgressFilterChange('directorate', e.target.value)}
                 >
                   <MenuItem value="All">All</MenuItem>
                   <MenuItem value="North">North</MenuItem>
@@ -341,9 +411,9 @@ const ProjectMonitoring = () => {
               <FormControl fullWidth margin="normal">
                 <InputLabel>Filter by Status</InputLabel>
                 <Select
-                  value={filters.status}
+                  value={progressFilters.status}
                   label="Filter by Status"
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  onChange={(e) => handleProgressFilterChange('status', e.target.value)}
                 >
                   <MenuItem value="All">All</MenuItem>
                   <MenuItem value="Planning">Planning</MenuItem>
@@ -370,22 +440,27 @@ const ProjectMonitoring = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredProjects.map(project => {
+                {filteredProgressProjects.map(project => {
                   const kpis = calculateProjectKPIs(project);
+                  const plannedRevenue = project.targets ? 
+                    project.targets.reduce((sum, target) => sum + (target.value || 0), 0) : 0;
+                  
                   return (
                     <TableRow key={project.id}>
                       <TableCell>{project.id}</TableCell>
                       <TableCell>{project.name}</TableCell>
-                      <TableCell>{formatCurrency(project.caValue)}</TableCell>
-                      <TableCell>{formatCurrency(kpis.plannedRevenue || 0)}</TableCell>
+                      <TableCell>{formatCurrency(project.caValue || 0)}</TableCell>
+                      <TableCell>{formatCurrency(plannedRevenue)}</TableCell>
                       <TableCell>{formatCurrency(kpis.actualRevenue || 0)}</TableCell>
                       <TableCell>
                         <Chip 
-                          label={formatCurrency(kpis.lag || 0)} 
+                          label={formatCurrency(plannedRevenue - (kpis.actualRevenue || 0))} 
                           color={
-                            kpis.lagRisk === 'Low' ? 'success' :
-                            kpis.lagRisk === 'Moderate' ? 'warning' :
-                            kpis.lagRisk === 'High' ? 'error' : 'default'
+                            plannedRevenue > 0 ? 
+                              ((plannedRevenue - (kpis.actualRevenue || 0)) / plannedRevenue * 100 <= 5 ? 'success' :
+                              (plannedRevenue - (kpis.actualRevenue || 0)) / plannedRevenue * 100 <= 10 ? 'warning' :
+                              (plannedRevenue - (kpis.actualRevenue || 0)) / plannedRevenue * 100 <= 15 ? 'error' : 'default')
+                              : 'default'
                           }
                         />
                       </TableCell>
@@ -400,11 +475,14 @@ const ProjectMonitoring = () => {
             Progress Comparison Chart
           </Typography>
           <CustomBarChart
-            data={filteredProjects.map(project => {
+            data={filteredProgressProjects.map(project => {
               const kpis = calculateProjectKPIs(project);
+              const plannedRevenue = project.targets ? 
+                project.targets.reduce((sum, target) => sum + (target.value || 0), 0) : 0;
+              
               return {
                 name: project.name,
-                Planned: kpis.plannedRevenue || 0,
+                Planned: plannedRevenue,
                 Actual: kpis.actualRevenue || 0
               };
             })}
@@ -416,21 +494,292 @@ const ProjectMonitoring = () => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={2}>
-          <Typography variant="h6" gutterBottom>
-            Financial Tracking
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Filter by Directorate</InputLabel>
+                <Select
+                  value={financialFilters.directorate}
+                  label="Filter by Directorate"
+                  onChange={(e) => handleFinancialFilterChange('directorate', e.target.value)}
+                >
+                  <MenuItem value="All">All</MenuItem>
+                  <MenuItem value="North">North</MenuItem>
+                  <MenuItem value="Centre">Centre</MenuItem>
+                  <MenuItem value="KPK">KPK</MenuItem>
+                  <MenuItem value="Baluchistan">Baluchistan</MenuItem>
+                  <MenuItem value="Sindh">Sindh</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Filter by Status</InputLabel>
+                <Select
+                  value={financialFilters.status}
+                  label="Filter by Status"
+                  onChange={(e) => handleFinancialFilterChange('status', e.target.value)}
+                >
+                  <MenuItem value="All">All</MenuItem>
+                  <MenuItem value="Planning">Planning</MenuItem>
+                  <MenuItem value="In Progress">In Progress</MenuItem>
+                  <MenuItem value="Completed">Completed</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+          <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+            Financial Tracking - Section 1
           </Typography>
-          <Alert severity="info">
-            Detailed financial tracking features will be implemented soon.
-          </Alert>
+          <TableContainer component={Paper} sx={{ mb: 3 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Project ID</TableCell>
+                  <TableCell>Project Name</TableCell>
+                  <TableCell>CA Value</TableCell>
+                  <TableCell>Actual Revenue</TableCell>
+                  <TableCell>Vetted Revenue</TableCell>
+                  <TableCell>Amount Received</TableCell>
+                  <TableCell>Slippage</TableCell>
+                  <TableCell>Receivable</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredFinancialProjects.map(project => {
+                  const kpis = calculateProjectKPIs(project);
+                  return (
+                    <TableRow key={project.id}>
+                      <TableCell>{project.id}</TableCell>
+                      <TableCell>{project.name}</TableCell>
+                      <TableCell>{formatCurrency(project.caValue || 0)}</TableCell>
+                      <TableCell>{formatCurrency(kpis.actualRevenue || 0)}</TableCell>
+                      <TableCell>{formatCurrency(kpis.vettedRevenue || 0)}</TableCell>
+                      <TableCell>{formatCurrency(kpis.amountReceived || 0)}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={formatCurrency(kpis.slippage || 0)} 
+                          color={
+                            kpis.actualRevenue > 0 ? 
+                              ((kpis.slippage || 0) / kpis.actualRevenue * 100 <= 5 ? 'success' :
+                              (kpis.slippage || 0) / kpis.actualRevenue * 100 <= 10 ? 'warning' :
+                              (kpis.slippage || 0) / kpis.actualRevenue * 100 <= 15 ? 'error' : 'default')
+                              : 'default'
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={formatCurrency(kpis.receivable || 0)} 
+                          color={
+                            kpis.amountReceived > 0 ? 
+                              ((kpis.receivable || 0) / kpis.amountReceived * 100 <= 5 ? 'success' :
+                              (kpis.receivable || 0) / kpis.amountReceived * 100 <= 10 ? 'warning' :
+                              (kpis.receivable || 0) / kpis.amountReceived * 100 <= 15 ? 'error' : 'default')
+                              : 'default'
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Typography variant="h6" gutterBottom>
+            Financial Tracking - Section 2
+          </Typography>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Project ID</TableCell>
+                  <TableCell>Project Name</TableCell>
+                  <TableCell>CA Value</TableCell>
+                  <TableCell>Actual Revenue</TableCell>
+                  <TableCell>Expenditure</TableCell>
+                  <TableCell>Cost Variance</TableCell>
+                  <TableCell>Profitability</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredFinancialProjects.map(project => {
+                  const kpis = calculateProjectKPIs(project);
+                  const totalExpenditure = Object.values(kpis.expenditures || {}).reduce((sum, val) => sum + (val || 0), 0);
+                  const costVariance = (kpis.actualRevenue || 0) - totalExpenditure;
+                  const profitability = totalExpenditure > 0 ? ((kpis.actualRevenue || 0) - totalExpenditure) / totalExpenditure * 100 : 0;
+                  
+                  return (
+                    <TableRow key={project.id}>
+                      <TableCell>{project.id}</TableCell>
+                      <TableCell>{project.name}</TableCell>
+                      <TableCell>{formatCurrency(project.caValue || 0)}</TableCell>
+                      <TableCell>{formatCurrency(kpis.actualRevenue || 0)}</TableCell>
+                      <TableCell>{formatCurrency(totalExpenditure)}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={formatCurrency(costVariance)} 
+                          color={costVariance >= 0 ? 'success' : 'error'}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={`${profitability.toFixed(2)}%`} 
+                          color={
+                            profitability >= (project.plannedProfitability || 0) ? 'success' :
+                            profitability >= (project.plannedProfitability || 0) * 0.92 ? 'warning' :
+                            profitability >= (project.plannedProfitability || 0) * 0.85 ? 'error' : 'default'
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </TabPanel>
 
         <TabPanel value={tabValue} index={3}>
-          <Typography variant="h6" gutterBottom>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Filter by Directorate</InputLabel>
+                <Select
+                  value={kpiFilters.directorate}
+                  label="Filter by Directorate"
+                  onChange={(e) => handleKpiFilterChange('directorate', e.target.value)}
+                >
+                  <MenuItem value="All">All</MenuItem>
+                  <MenuItem value="North">North</MenuItem>
+                  <MenuItem value="Centre">Centre</MenuItem>
+                  <MenuItem value="KPK">KPK</MenuItem>
+                  <MenuItem value="Baluchistan">Baluchistan</MenuItem>
+                  <MenuItem value="Sindh">Sindh</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Filter by Status</InputLabel>
+                <Select
+                  value={kpiFilters.status}
+                  label="Filter by Status"
+                  onChange={(e) => handleKpiFilterChange('status', e.target.value)}
+                >
+                  <MenuItem value="All">All</MenuItem>
+                  <MenuItem value="Planning">Planning</MenuItem>
+                  <MenuItem value="In Progress">In Progress</MenuItem>
+                  <MenuItem value="Completed">Completed</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+          <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
             KPIs Monitoring
           </Typography>
-          <Alert severity="info">
-            KPIs monitoring features will be implemented soon.
-          </Alert>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Project ID</TableCell>
+                  <TableCell>Project Name</TableCell>
+                  <TableCell>Lag</TableCell>
+                  <TableCell>Scope Creep</TableCell>
+                  <TableCell>Cost Variance</TableCell>
+                  <TableCell>Profitability</TableCell>
+                  <TableCell>Slippage</TableCell>
+                  <TableCell>Receivable</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredKpiProjects.map(project => {
+                  const kpis = calculateProjectKPIs(project);
+                  const plannedRevenue = project.targets ? 
+                    project.targets.reduce((sum, target) => sum + (target.value || 0), 0) : 0;
+                  const lag = plannedRevenue - (kpis.actualRevenue || 0);
+                  const lagPercentage = plannedRevenue > 0 ? (lag / plannedRevenue) * 100 : 0;
+                  
+                  const scopeCreep = (project.revisedCaValue || 0) - (project.caValue || 0);
+                  const scopeCreepPercentage = project.caValue > 0 ? (scopeCreep / project.caValue) * 100 : 0;
+                  
+                  const totalExpenditure = Object.values(kpis.expenditures || {}).reduce((sum, val) => sum + (val || 0), 0);
+                  const costVariance = (kpis.actualRevenue || 0) - totalExpenditure;
+                  
+                  const profitability = totalExpenditure > 0 ? ((kpis.actualRevenue || 0) - totalExpenditure) / totalExpenditure * 100 : 0;
+                  
+                  const slippagePercentage = kpis.actualRevenue > 0 ? ((kpis.slippage || 0) / kpis.actualRevenue) * 100 : 0;
+                  const receivablePercentage = kpis.amountReceived > 0 ? ((kpis.receivable || 0) / kpis.amountReceived) * 100 : 0;
+
+                  return (
+                    <TableRow key={project.id}>
+                      <TableCell>{project.id}</TableCell>
+                      <TableCell>{project.name}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={`${formatCurrency(lag)} (${lagPercentage.toFixed(2)}%)`} 
+                          color={
+                            lagPercentage <= 5 ? 'success' :
+                            lagPercentage <= 10 ? 'warning' :
+                            lagPercentage <= 15 ? 'error' : 'default'
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={`${formatCurrency(scopeCreep)} (${scopeCreepPercentage.toFixed(2)}%)`} 
+                          color={
+                            scopeCreepPercentage <= 10 ? 'success' :
+                            scopeCreepPercentage <= 15 ? 'warning' :
+                            scopeCreepPercentage <= 25 ? 'error' : 'default'
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={formatCurrency(costVariance)} 
+                          color={costVariance >= 0 ? 'success' : 'error'}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={`${profitability.toFixed(2)}%`} 
+                          color={
+                            profitability >= (project.plannedProfitability || 0) ? 'success' :
+                            profitability >= (project.plannedProfitability || 0) * 0.92 ? 'warning' :
+                            profitability >= (project.plannedProfitability || 0) * 0.85 ? 'error' : 'default'
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={`${formatCurrency(kpis.slippage || 0)} (${slippagePercentage.toFixed(2)}%)`} 
+                          color={
+                            slippagePercentage <= 5 ? 'success' :
+                            slippagePercentage <= 10 ? 'warning' :
+                            slippagePercentage <= 15 ? 'error' : 'default'
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={`${formatCurrency(kpis.receivable || 0)} (${receivablePercentage.toFixed(2)}%)`} 
+                          color={
+                            receivablePercentage <= 5 ? 'success' :
+                            receivablePercentage <= 10 ? 'warning' :
+                            receivablePercentage <= 15 ? 'error' : 'default'
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </TabPanel>
       </Card>
     </Box>
