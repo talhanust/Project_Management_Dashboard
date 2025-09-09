@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
-import { AppProvider } from './contexts/AppContext';
+import { AppProvider, useAppContext } from './contexts/AppContext';
 import Dashboard from './components/Dashboard';
 import ProjectPlanning from './components/ProjectPlanning';
 import ProjectMonitoring from './components/ProjectMonitoring';
@@ -108,33 +108,39 @@ const getDesignTokens = (mode) => ({
   },
 });
 
-function App() {
-  const { darkMode } = useApp(); // This would need to be moved to a separate component or use context
+function AppContent() {
+  const { darkMode } = useAppContext();
   const theme = React.useMemo(() => createTheme(getDesignTokens(darkMode ? 'dark' : 'light')), [darkMode]);
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppProvider>
-        <Router>
-          <Box sx={{ display: 'flex' }}>
-            <Navigation />
-            <Box component="main" sx={{ flexGrow: 1, p: 3, width: { md: `calc(100% - 240px)` } }}>
-              <Box sx={{ mt: 8 }}>
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/planning" element={<ProjectPlanning />} />
-                  <Route path="/monitoring" element={<ProjectMonitoring />} />
-                  <Route path="/insights" element={<AIInsights />} />
-                  <Route path="/reports" element={<ExecutiveReports />} />
-                  <Route path="/settings" element={<Settings />} />
-                </Routes>
-              </Box>
+      <Router>
+        <Box sx={{ display: 'flex' }}>
+          <Navigation />
+          <Box component="main" sx={{ flexGrow: 1, p: 3, width: { md: `calc(100% - 240px)` } }}>
+            <Box sx={{ mt: 8 }}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/planning" element={<ProjectPlanning />} />
+                <Route path="/monitoring" element={<ProjectMonitoring />} />
+                <Route path="/insights" element={<AIInsights />} />
+                <Route path="/reports" element={<ExecutiveReports />} />
+                <Route path="/settings" element={<Settings />} />
+              </Routes>
             </Box>
           </Box>
-        </Router>
-      </AppProvider>
+        </Box>
+      </Router>
     </ThemeProvider>
+  );
+}
+
+function App() {
+  return (
+    <AppProvider>
+      <AppContent />
+    </AppProvider>
   );
 }
 
