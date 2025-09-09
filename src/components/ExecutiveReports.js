@@ -23,7 +23,6 @@ import {
 } from '@mui/material';
 import {
   Description as ReportIcon,
-  Download as DownloadIcon,
   PictureAsPdf as PdfIcon,
   Article as WordIcon
 } from '@mui/icons-material';
@@ -59,12 +58,6 @@ const ExecutiveReports = () => {
     // In a real application, this would generate and download the report
     alert(`Downloading ${format} report for ${type}`);
   };
-
-  const filteredProjects = projects.filter(project => {
-    if (directorate !== 'All' && project.directorate !== directorate) return false;
-    if (selectedProject !== 'All' && project.id !== selectedProject) return false;
-    return true;
-  });
 
   const stats = calculateStatistics();
 
