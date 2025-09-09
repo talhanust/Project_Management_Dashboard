@@ -51,6 +51,7 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   // Save state to localStorage whenever it changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     saveState(state);
   }, [state.projects, state.currency, state.filters, state.kpiThresholds, state.darkMode]);
