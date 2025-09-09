@@ -21,7 +21,6 @@ import {
   TableRow
 } from '@mui/material';
 import {
-  TrendingUp as TrendingUpIcon,
   Assignment as AssignmentIcon,
   Schedule as ScheduleIcon,
   CheckCircle as CheckCircleIcon,
@@ -103,10 +102,6 @@ const Dashboard = () => {
       setLoading(false);
     }
   }, [projects, calculateProjectKPIs, calculateRiskLevels]);
-
-  const filteredProjects = filter === 'All' 
-    ? projects 
-    : projects.filter(project => project.directorate === filter);
 
   const directorateStats = [
     'North', 'Centre', 'KPK', 'Baluchistan', 'Sindh'
