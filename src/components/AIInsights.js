@@ -123,10 +123,10 @@ const AIInsights = () => {
 
   const generateInsights = useCallback(async () => {
     setLoading(true);
-    
+
     // Simulate AI processing delay
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     const filteredProjects = projects.filter(project => {
       if (filters.directorate !== 'All' && project.directorate !== filters.directorate) return false;
       if (filters.project !== 'All' && project.id !== filters.project) return false;
@@ -137,7 +137,7 @@ const AIInsights = () => {
       const kpis = calculateProjectKPIs(project);
       const riskLevels = calculateRiskLevels(project, kpis);
       const recommendations = getAIRecommendations(project, riskLevels);
-      
+
       return {
         project,
         kpis,
@@ -281,7 +281,7 @@ const AIInsights = () => {
                       />
                       <Chip
                         label={`Profit: ${insight.riskLevels.profitability.toFixed(2)}%`}
-                        size="small'
+                        size="small"
                         color={
                           insight.riskLevels.profitabilityRisk === 'Excellent' ? 'success' :
                           insight.riskLevels.profitabilityRisk === 'Satisfactory' ? 'warning' : 'error'
