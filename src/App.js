@@ -17,7 +17,6 @@ const getDesignTokens = (mode) => ({
     mode,
     ...(mode === 'light'
       ? {
-          // Light mode palette
           primary: {
             main: '#2c3e50',
             light: '#3c4c5e',
@@ -26,7 +25,7 @@ const getDesignTokens = (mode) => ({
           secondary: {
             main: '#3498db',
             light: '#5faee3',
-            dark: '##1d6fa5',
+            dark: '#1d6fa5',
           },
           background: {
             default: '#f8f9fa',
@@ -34,7 +33,6 @@ const getDesignTokens = (mode) => ({
           },
         }
       : {
-          // Dark mode palette
           primary: {
             main: '#3498db',
             light: '#5faee3',
