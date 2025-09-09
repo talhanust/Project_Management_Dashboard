@@ -12,6 +12,7 @@ import {
   useTheme,
   useMediaQuery,
   Box,
+  Badge
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -23,6 +24,7 @@ import {
   Settings as SettingsIcon,
   Brightness4 as DarkIcon,
   Brightness7 as LightIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
@@ -33,13 +35,25 @@ const Navigation = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { darkMode, setDarkMode } = useApp();
+  const { darkMode, setDarkMode, calculateStatistics } = useApp();
+
+  const stats = calculateStatistics();
 
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
+    { 
+      text: 'Dashboard', 
+      icon: <DashboardIcon />, 
+      path: '/',
+      badge: stats.highRisk > 0 ? stats.highRisk : null
+    },
     { text: 'Project Planning', icon: <PlanningIcon />, path: '/planning' },
     { text: 'Project Monitoring', icon: <MonitoringIcon />, path: '/monitoring' },
-    { text: 'AI Insights', icon: <InsightsIcon />, path: '/insights' },
+    { 
+      text: 'AI Insights', 
+      icon: <InsightsIcon />, 
+      path: '/insights',
+      badge: stats.highRisk > 0 ? stats.highRisk : null
+    },
     { text: 'Executive Reports', icon: <ReportsIcon />, path: '/reports' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
@@ -86,8 +100,19 @@ const Navigation = () => {
               },
             }}
           >
-            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemIcon>
+              {item.badge ? (
+                <Badge badgeContent={item.badge} color="error">
+                  {item.icon}
+                </Badge>
+              ) : (
+                item.icon
+              )}
+            </ListItemIcon>
             <ListItemText primary={item.text} />
+            {item.badge && (
+              <Badge badgeContent={item.badge} color="error" />
+            )}
           </ListItem>
         ))}
       </List>
@@ -117,6 +142,15 @@ const Navigation = () => {
           )}
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Project Management Dashboard
+            {stats.highRisk > 0 && (
+              <Badge 
+                badgeContent={stats.highRisk} 
+                color="error" 
+                sx={{ ml: 2 }}
+              >
+                <WarningIcon sx={{ ml: 1 }} />
+              </Badge>
+            )}
           </Typography>
           <IconButton color="inherit" onClick={toggleTheme}>
             {darkMode ? <LightIcon /> : <DarkIcon />}
