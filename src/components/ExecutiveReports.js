@@ -19,7 +19,8 @@ import {
   Paper,
   Chip,
   Tabs,
-  Tab
+  Tab,
+  CircularProgress
 } from '@mui/material';
 import {
   Description as ReportIcon,
@@ -27,6 +28,9 @@ import {
   Article as WordIcon
 } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
+import * as docx from 'docx';
+import { saveAs } from 'file-saver';
+import PPTXGenJS from 'pptxgenjs';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -44,19 +48,149 @@ const ExecutiveReports = () => {
   const [selectedProject, setSelectedProject] = useState('All');
   const [tabValue, setTabValue] = useState(0);
   const [generateStatus, setGenerateStatus] = useState('');
+  const [generating, setGenerating] = useState(false);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
 
   const handleGenerateReport = () => {
-    setGenerateStatus('Report generated successfully!');
-    setTimeout(() => setGenerateStatus(''), 3000);
+    setGenerating(true);
+    setTimeout(() => {
+      setGenerateStatus('Report generated successfully!');
+      setGenerating(false);
+      setTimeout(() => setGenerateStatus(''), 3000);
+    }, 1500);
   };
 
-  const handleDownloadReport = (format, type = reportType) => {
-    // In a real application, this would generate and download the report
-    alert(`Downloading ${format} report for ${type}`);
+  const handleDownloadReport = async (format, type = reportType) => {
+    setGenerating(true);
+    try {
+      if (format === 'word') {
+        await generateWordReport(type);
+      } else if (format === 'powerpoint') {
+        await generatePowerPointReport(type);
+      }
+      setGenerateStatus(`${format.charAt(0).toUpperCase() + format.slice(1)} report downloaded successfully!`);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      setGenerateStatus('Error generating report. Please try again.');
+    } finally {
+      setGenerating(false);
+      setTimeout(() => setGenerateStatus(''), 3000);
+    }
+  };
+
+  const generateWordReport = async (type) => {
+    // Create a new document
+    const doc = new docx.Document();
+
+    // Add title
+    doc.addSection({
+      properties: {},
+      children: [
+        new docx.Paragraph({
+          text: `${type.charAt(0).toUpperCase() + type.slice(1)} Project Report`,
+          heading: docx.HeadingLevel.HEADING_1,
+        }),
+        new docx.Paragraph({
+          text: `Generated on ${new Date().toLocaleDateString()}`,
+        }),
+        new docx.Paragraph({ text: '' }),
+      ],
+    });
+
+    // Add content based on report type
+    if (type === 'overall') {
+      const stats = calculateStatistics();
+      doc.addSection({
+        properties: {},
+        children: [
+          new docx.Paragraph({
+            text: 'Executive Summary',
+            heading: docx.HeadingLevel.HEADING_2,
+          }),
+          new docx.Paragraph({
+            text: `Total Projects: ${stats.total}`,
+          }),
+          new docx.Paragraph({
+            text: `High Risk Projects: ${stats.highRisk}`,
+          }),
+          new docx.Paragraph({
+            text: `Total Revenue: ${formatCurrency(stats.totalRevenue)}`,
+          }),
+          new docx.Paragraph({
+            text: `Total Profit: ${formatCurrency(stats.totalProfit)}`,
+          }),
+        ],
+      });
+    }
+
+    // Generate the document
+    const buffer = await docx.Packer.toBuffer(doc);
+    saveAs(new Blob([buffer]), `${type}-report.docx`);
+  };
+
+  const generatePowerPointReport = async (type) => {
+    const pptx = new PPTXGenJS();
+    const slide = pptx.addSlide();
+
+    // Add title
+    slide.addText(`${type.charAt(0).toUpperCase() + type.slice(1)} Project Report`, {
+      x: 0.5,
+      y: 0.5,
+      w: '90%',
+      h: 1,
+      fontSize: 24,
+      bold: true,
+      color: '2c3e50',
+    });
+
+    // Add date
+    slide.addText(`Generated on ${new Date().toLocaleDateString()}`, {
+      x: 0.5,
+      y: 1.5,
+      w: '90%',
+      h: 0.5,
+      fontSize: 14,
+      color: '7f8c8d',
+    });
+
+    // Add content based on report type
+    if (type === 'overall') {
+      const stats = calculateStatistics();
+      slide.addText(`Total Projects: ${stats.total}`, {
+        x: 0.5,
+        y: 2.5,
+        w: '40%',
+        h: 0.5,
+        fontSize: 16,
+      });
+      slide.addText(`High Risk Projects: ${stats.highRisk}`, {
+        x: 0.5,
+        y: 3.0,
+        w: '40%',
+        h: 0.5,
+        fontSize: 16,
+      });
+      slide.addText(`Total Revenue: ${formatCurrency(stats.totalRevenue)}`, {
+        x: 0.5,
+        y: 3.5,
+        w: '40%',
+        h: 0.5,
+        fontSize: 16,
+      });
+      slide.addText(`Total Profit: ${formatCurrency(stats.totalProfit)}`, {
+        x: 0.5,
+        y: 4.0,
+        w: '40%',
+        h: 0.5,
+        fontSize: 16,
+      });
+    }
+
+    // Save the presentation
+    pptx.writeFile({ fileName: `${type}-report.pptx` });
   };
 
   const stats = calculateStatistics();
@@ -69,25 +203,25 @@ const ExecutiveReports = () => {
         </Typography>
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
+            <Paper sx={{ p: 2, textAlign: 'center', background: 'linear-gradient(45deg, #2c3e50, #3498db)', color: 'white' }}>
               <Typography variant="h4">{stats.total}</Typography>
               <Typography variant="body2">Total Projects</Typography>
             </Paper>
           </Grid>
           <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
+            <Paper sx={{ p: 2, textAlign: 'center', background: 'linear-gradient(45deg, #e74c3c, #ec7063)', color: 'white' }}>
               <Typography variant="h4">{stats.highRisk}</Typography>
               <Typography variant="body2">High Risk Projects</Typography>
             </Paper>
           </Grid>
           <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
+            <Paper sx={{ p: 2, textAlign: 'center', background: 'linear-gradient(45deg, #27ae60, #2ecc71)', color: 'white' }}>
               <Typography variant="h4">{formatCurrency(stats.totalRevenue)}</Typography>
               <Typography variant="body2">Total Revenue</Typography>
             </Paper>
           </Grid>
           <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
+            <Paper sx={{ p: 2, textAlign: 'center', background: 'linear-gradient(45deg, #3498db, #5faee3)', color: 'white' }}>
               <Typography variant="h4">{formatCurrency(stats.totalProfit)}</Typography>
               <Typography variant="body2">Total Profit</Typography>
             </Paper>
@@ -170,13 +304,13 @@ const ExecutiveReports = () => {
         
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
+            <Paper sx={{ p: 2, textAlign: 'center', background: 'linear-gradient(45deg, #2c3e50, #3498db)', color: 'white' }}>
               <Typography variant="h4">{dirProjects.length}</Typography>
               <Typography variant="body2">Total Projects</Typography>
             </Paper>
           </Grid>
           <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
+            <Paper sx={{ p: 2, textAlign: 'center', background: 'linear-gradient(45deg, #e74c3c, #ec7063)', color: 'white' }}>
               <Typography variant="h4">
                 {dirProjects.filter(p => {
                   const kpis = calculateProjectKPIs(p);
@@ -188,7 +322,7 @@ const ExecutiveReports = () => {
             </Paper>
           </Grid>
           <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2, textAlign: 'center' }}>
+            <Paper sx={{ p: 2, textAlign: 'center', background: 'linear-gradient(45deg, #27ae60, #2ecc71)', color: 'white' }}>
               <Typography variant="h4">
                 {dirProjects.filter(p => p.status === 'Completed').length}
               </Typography>
@@ -273,14 +407,35 @@ const ExecutiveReports = () => {
             <Typography><strong>Category:</strong> {project.category}</Typography>
             <Typography><strong>Location:</strong> {project.location}</Typography>
             <Typography><strong>Client:</strong> {project.client}</Typography>
-            <Typography><strong>Status:</strong> {project.status}</Typography>
+            <Typography><strong>Status:</strong> 
+              <Chip 
+                label={project.status} 
+                color={
+                  project.status === 'Completed' ? 'success' :
+                  project.status === 'In Progress' ? 'warning' : 'info'
+                }
+                size="small"
+                sx={{ ml: 1 }}
+              />
+            </Typography>
           </Grid>
           <Grid item xs={12} md={6}>
             <Typography variant="h6">Financial Information</Typography>
             <Typography><strong>CA Value:</strong> {formatCurrency(project.caValue)}</Typography>
             <Typography><strong>Revised CA Value:</strong> {formatCurrency(project.revisedCaValue)}</Typography>
             <Typography><strong>Actual Revenue:</strong> {formatCurrency(kpis.actualRevenue)}</Typography>
-            <Typography><strong>Profitability:</strong> {riskLevels.profitability.toFixed(2)}%</Typography>
+            <Typography><strong>Profitability:</strong> 
+              <Chip 
+                label={`${riskLevels.profitability.toFixed(2)}%`} 
+                color={
+                  riskLevels.profitability >= (project.plannedProfitability || 0) ? 'success' :
+                  riskLevels.profitability >= (project.plannedProfitability || 0) * 0.92 ? 'warning' :
+                  riskLevels.profitability >= (project.plannedProfitability || 0) * 0.85 ? 'error' : 'default'
+                }
+                size="small"
+                sx={{ ml: 1 }}
+              />
+            </Typography>
           </Grid>
         </Grid>
 
@@ -364,11 +519,14 @@ const ExecutiveReports = () => {
                 disabled={reportType !== 'project'}
               >
                 <MenuItem value="All">All Projects</MenuItem>
-                {projects.map(project => (
-                  <MenuItem key={project.id} value={project.id}>
-                    {project.name}
-                  </MenuItem>
-                ))}
+                {projects
+                  .filter(p => directorate === 'All' || p.directorate === directorate)
+                  .map(project => (
+                    <MenuItem key={project.id} value={project.id}>
+                      {project.name}
+                    </MenuItem>
+                  ))
+                }
               </Select>
             </FormControl>
           </Grid>
@@ -377,16 +535,18 @@ const ExecutiveReports = () => {
             <Button
               variant="contained"
               onClick={handleGenerateReport}
-              startIcon={<ReportIcon />}
+              startIcon={generating ? <CircularProgress size={20} /> : <ReportIcon />}
+              disabled={generating}
               sx={{ mr: 2 }}
             >
-              Generate Report
+              {generating ? 'Generating Report...' : 'Generate Report'}
             </Button>
             
             <Button
               variant="outlined"
               onClick={() => handleDownloadReport('word')}
-              startIcon={<WordIcon />}
+              startIcon={generating ? <CircularProgress size={20} /> : <WordIcon />}
+              disabled={generating}
               sx={{ mr: 2 }}
             >
               Word Report
@@ -395,7 +555,8 @@ const ExecutiveReports = () => {
             <Button
               variant="outlined"
               onClick={() => handleDownloadReport('powerpoint')}
-              startIcon={<PdfIcon />}
+              startIcon={generating ? <CircularProgress size={20} /> : <PdfIcon />}
+              disabled={generating}
             >
               PowerPoint Report
             </Button>
@@ -403,7 +564,7 @@ const ExecutiveReports = () => {
 
           {generateStatus && (
             <Grid item xs={12}>
-              <Alert severity="success">
+              <Alert severity={generateStatus.includes('Error') ? 'error' : 'success'}>
                 {generateStatus}
               </Alert>
             </Grid>
@@ -438,6 +599,7 @@ const ExecutiveReports = () => {
                   onClick={() => handleDownloadReport('word')}
                   startIcon={<WordIcon />}
                   fullWidth
+                  disabled={generating}
                 >
                   Export to Word
                 </Button>
@@ -453,6 +615,7 @@ const ExecutiveReports = () => {
                   onClick={() => handleDownloadReport('powerpoint')}
                   startIcon={<PdfIcon />}
                   fullWidth
+                  disabled={generating}
                 >
                   Export to PowerPoint
                 </Button>
