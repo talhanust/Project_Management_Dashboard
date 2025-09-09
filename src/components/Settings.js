@@ -20,14 +20,15 @@ import {
   DialogActions,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
+  Chip
 } from '@mui/material';
-import { Save as SaveIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { Save as SaveIcon, Refresh as RefreshIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
 import { sampleProjects } from '../data/sampleData';
 
 const Settings = () => {
-  const { darkMode, setDarkMode, currency, setCurrency, formatCurrency, resetToSampleData } = useApp();
+  const { darkMode, setDarkMode, currency, setCurrency, formatCurrency, resetToSampleData, deleteProject, projects } = useApp();
   const [settings, setSettings] = useState({
     currency,
     darkMode,
@@ -39,6 +40,8 @@ const Settings = () => {
 
   const [saveStatus, setSaveStatus] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
 
   const handleSettingChange = (field, value) => {
     setSettings(prev => ({
@@ -63,6 +66,21 @@ const Settings = () => {
     setConfirmOpen(false);
     setSaveStatus('Sample data loaded successfully!');
     setTimeout(() => setSaveStatus(''), 3000);
+  };
+
+  const handleDeleteProject = (projectId) => {
+    setProjectToDelete(projectId);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (projectToDelete) {
+      deleteProject(projectToDelete);
+      setDeleteConfirmOpen(false);
+      setProjectToDelete(null);
+      setSaveStatus('Project deleted successfully!');
+      setTimeout(() => setSaveStatus(''), 3000);
+    }
   };
 
   return (
@@ -190,6 +208,63 @@ const Settings = () => {
       </Card>
 
       <Card elevation={2} sx={{ p: 3, mt: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Project Management
+        </Typography>
+        <Typography variant="body2" gutterBottom sx={{ mb: 2 }}>
+          Manage your projects directly from settings.
+        </Typography>
+        
+        {projects.length > 0 ? (
+          <Box>
+            {projects.map(project => (
+              <Box 
+                key={project.id} 
+                sx={{ 
+                  p: 2, 
+                  mb: 1, 
+                  border: '1px solid',
+                  borderColor: 'grey.200',
+                  borderRadius: 1,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <Box>
+                  <Typography variant="subtitle1" gutterBottom>
+                    {project.name}
+                  </Typography>
+                  <Box display="flex" gap={1}>
+                    <Chip label={project.directorate} size="small" />
+                    <Chip 
+                      label={project.status} 
+                      color={
+                        project.status === 'Completed' ? 'success' :
+                        project.status === 'In Progress' ? 'warning' : 'info'
+                      }
+                      size="small"
+                    />
+                  </Box>
+                </Box>
+                <Button 
+                  variant="outlined" 
+                  color="error" 
+                  size="small"
+                  onClick={() => handleDeleteProject(project.id)}
+                  startIcon={<DeleteIcon />}
+                >
+                  Delete
+                </Button>
+              </Box>
+            ))}
+          </Box>
+        ) : (
+          <Alert severity="info">No projects found. Create your first project in the Planning section.</Alert>
+        )}
+      </Card>
+
+      <Card elevation={2} sx={{ p: 3, mt: 3 }}>
         <Typography variant="h6" gutterBottom color="error">
           Danger Zone
         </Typography>
@@ -236,6 +311,21 @@ const Settings = () => {
           <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
           <Button onClick={handleResetToSampleData} color="error" variant="contained">
             Reset Data
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this project? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={confirmDelete} color="error" variant="contained">
+            Delete
           </Button>
         </DialogActions>
       </Dialog>
