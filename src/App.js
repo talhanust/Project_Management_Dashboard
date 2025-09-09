@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
-import { AppProvider, useAppContext } from './contexts/AppContext';
+import { AppProvider, useApp } from './contexts/AppContext';
 import Dashboard from './components/Dashboard';
 import ProjectPlanning from './components/ProjectPlanning';
 import ProjectMonitoring from './components/ProjectMonitoring';
@@ -26,7 +26,7 @@ const getDesignTokens = (mode) => ({
           secondary: {
             main: '#3498db',
             light: '#5faee3',
-            dark: '#1d6fa5',
+            dark: '##1d6fa5',
           },
           background: {
             default: '#f8f9fa',
@@ -109,7 +109,7 @@ const getDesignTokens = (mode) => ({
 });
 
 function AppContent() {
-  const { darkMode } = useAppContext();
+  const { darkMode } = useApp();
   const theme = React.useMemo(() => createTheme(getDesignTokens(darkMode ? 'dark' : 'light')), [darkMode]);
 
   return (
