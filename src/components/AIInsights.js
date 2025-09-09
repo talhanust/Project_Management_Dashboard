@@ -30,6 +30,15 @@ const AIInsights = () => {
   });
   const [loading, setLoading] = useState(false);
   const [insights, setInsights] = useState([]);
+  const [filteredProjects, setFilteredProjects] = useState(projects);
+
+  useEffect(() => {
+    if (filters.directorate === 'All') {
+      setFilteredProjects(projects);
+    } else {
+      setFilteredProjects(projects.filter(p => p.directorate === filters.directorate));
+    }
+  }, [filters.directorate, projects]);
 
   const calculateRiskScore = useCallback((riskLevels) => {
     let score = 0;
@@ -205,7 +214,7 @@ const AIInsights = () => {
                 onChange={(e) => handleFilterChange('project', e.target.value)}
               >
                 <MenuItem value="All">All Projects</MenuItem>
-                {projects.map(project => (
+                {filteredProjects.map(project => (
                   <MenuItem key={project.id} value={project.id}>
                     {project.name} - {project.directorate}
                   </MenuItem>
