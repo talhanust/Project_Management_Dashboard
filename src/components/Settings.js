@@ -12,13 +12,22 @@ import {
   FormControlLabel,
   Button,
   Alert,
-  TextField
+  TextField,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText
 } from '@mui/material';
-import { Save as SaveIcon } from '@mui/icons-material';
+import { Save as SaveIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
+import { sampleProjects } from '../data/sampleData';
 
 const Settings = () => {
-  const { darkMode, setDarkMode, currency, setCurrency, formatCurrency } = useApp();
+  const { darkMode, setDarkMode, currency, setCurrency, formatCurrency, resetToSampleData } = useApp();
   const [settings, setSettings] = useState({
     currency,
     darkMode,
@@ -29,6 +38,7 @@ const Settings = () => {
   });
 
   const [saveStatus, setSaveStatus] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleSettingChange = (field, value) => {
     setSettings(prev => ({
@@ -45,6 +55,13 @@ const Settings = () => {
     localStorage.setItem('appSettings', JSON.stringify(settings));
     
     setSaveStatus('Settings saved successfully!');
+    setTimeout(() => setSaveStatus(''), 3000);
+  };
+
+  const handleResetToSampleData = () => {
+    resetToSampleData(sampleProjects);
+    setConfirmOpen(false);
+    setSaveStatus('Sample data loaded successfully!');
     setTimeout(() => setSaveStatus(''), 3000);
   };
 
@@ -145,6 +162,7 @@ const Settings = () => {
               variant="contained"
               onClick={handleSaveSettings}
               startIcon={<SaveIcon />}
+              sx={{ mr: 2 }}
             >
               Save Settings
             </Button>
@@ -170,6 +188,57 @@ const Settings = () => {
           })}
         </Typography>
       </Card>
+
+      <Card elevation={2} sx={{ p: 3, mt: 3 }}>
+        <Typography variant="h6" gutterBottom color="error">
+          Danger Zone
+        </Typography>
+        <Typography variant="body2" gutterBottom sx={{ mb: 2 }}>
+          These actions are irreversible. Use with caution.
+        </Typography>
+        
+        <Button
+          variant="outlined"
+          color="error"
+          onClick={() => setConfirmOpen(true)}
+          startIcon={<RefreshIcon />}
+        >
+          Reset to Sample Data
+        </Button>
+
+        <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+          This will replace all current projects with sample data. Your settings will be preserved.
+        </Typography>
+      </Card>
+
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>Confirm Reset</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to reset all project data? This action cannot be undone.
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            This will:
+          </Typography>
+          <List dense>
+            <ListItem>
+              <ListItemText primary="Replace all current projects with sample data" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Clear any unsaved changes" />
+            </ListItem>
+            <ListItem>
+              <ListItemText primary="Preserve your settings and preferences" />
+            </ListItem>
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleResetToSampleData} color="error" variant="contained">
+            Reset Data
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
