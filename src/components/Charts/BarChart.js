@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  BarChart,
+  BarChart as RechartsBarChart,
   Bar,
   XAxis,
   YAxis,
@@ -9,9 +9,11 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { Box, Typography, Paper } from '@mui/material';
+import { Box, Typography, Paper, useTheme } from '@mui/material';
 
-const CustomBarChart = ({ data, title, xAxisKey, barKey, color = '#3498db' }) => {
+const BarChart = ({ data, title, xAxisKey, barKeys, colors, tooltipFormatter, legendFormatter }) => {
+  const theme = useTheme();
+  
   // Default data if none provided
   const defaultData = [
     { name: 'Jan', value: 400 },
@@ -24,7 +26,22 @@ const CustomBarChart = ({ data, title, xAxisKey, barKey, color = '#3498db' }) =>
 
   const chartData = data || defaultData;
   const xKey = xAxisKey || 'name';
-  const bKey = barKey || 'value';
+  const bars = barKeys || ['value'];
+  const colorPalette = colors || [theme.palette.primary.main];
+
+  const formatTooltipValue = (value, name) => {
+    if (tooltipFormatter) {
+      return tooltipFormatter(value, name);
+    }
+    return [value, name];
+  };
+
+  const formatLegend = (value) => {
+    if (legendFormatter) {
+      return legendFormatter(value);
+    }
+    return value;
+  };
 
   return (
     <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
@@ -33,7 +50,7 @@ const CustomBarChart = ({ data, title, xAxisKey, barKey, color = '#3498db' }) =>
       </Typography>
       <Box sx={{ width: '100%', height: 300 }}>
         <ResponsiveContainer>
-          <BarChart
+          <RechartsBarChart
             data={chartData}
             margin={{
               top: 5,
@@ -46,21 +63,22 @@ const CustomBarChart = ({ data, title, xAxisKey, barKey, color = '#3498db' }) =>
             <XAxis dataKey={xKey} />
             <YAxis />
             <Tooltip 
-              formatter={(value) => [`${value}%`, 'Progress']}
-              labelFormatter={(value) => `Month: ${value}`}
+              formatter={formatTooltipValue}
             />
-            <Legend />
-            <Bar 
-              dataKey={bKey} 
-              fill={color} 
-              name="Completion %"
-              radius={[4, 4, 0, 0]}
-            />
-          </BarChart>
+            <Legend formatter={formatLegend} />
+            {bars.map((bar, index) => (
+              <Bar 
+                key={bar}
+                dataKey={bar} 
+                fill={colorPalette[index % colorPalette.length]} 
+                radius={[4, 4, 0, 0]}
+              />
+            ))}
+          </RechartsBarChart>
         </ResponsiveContainer>
       </Box>
     </Paper>
   );
 };
 
-export default CustomBarChart;
+export default BarChart;
