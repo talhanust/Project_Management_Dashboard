@@ -22,11 +22,16 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  FormControlLabel,
+  Switch,
+  Chip
 } from '@mui/material';
-import { Save as SaveIcon, Add as AddIcon } from '@mui/icons-material';
+import { Save as SaveIcon, Add as AddIcon, PictureAsPdf as PdfIcon, Image as ImageIcon } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
 import CustomBarChart from './BarChart';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -74,6 +79,9 @@ const ProjectPlanning = () => {
     generalAdmCost: '',
     overheadCalculationMethod: 'percentage'
   });
+
+  const [directorateFilter, setDirectorateFilter] = useState('All');
+  const [showFinancialGraphs, setShowFinancialGraphs] = useState(true);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -169,6 +177,29 @@ const ProjectPlanning = () => {
     }
   };
 
+  const exportChartAsImage = (chartId, filename) => {
+    const chartElement = document.getElementById(chartId);
+    html2canvas(chartElement).then(canvas => {
+      const link = document.createElement('a');
+      link.download = `${filename}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    });
+  };
+
+  const exportAsPDF = () => {
+    const element = document.getElementById('planning-content');
+    html2canvas(element).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save('project-planning-report.pdf');
+    });
+  };
+
   // Calculate budget totals
   const calculateBudgetTotals = (budget, project) => {
     const caValue = parseFloat(project?.caValue || 0);
@@ -200,11 +231,24 @@ const ProjectPlanning = () => {
     };
   };
 
+  const filteredProjects = directorateFilter === 'All' 
+    ? projects 
+    : projects.filter(p => p.directorate === directorateFilter);
+
   return (
-    <Box p={3}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Project Planning
-      </Typography>
+    <Box p={3} id="planning-content">
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1">
+          Project Planning
+        </Typography>
+        <Button
+          variant="outlined"
+          onClick={exportAsPDF}
+          startIcon={<PdfIcon />}
+        >
+          Export as PDF
+        </Button>
+      </Box>
 
       <Card elevation={2}>
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="project planning tabs">
@@ -440,7 +484,17 @@ const ProjectPlanning = () => {
                       <Typography><strong>Revised CA Value:</strong> {formatCurrency(projectData.revisedCaValue)}</Typography>
                       <Typography><strong>Start Date:</strong> {projectData.startDate}</Typography>
                       <Typography><strong>Completion Date:</strong> {projectData.completionDate}</Typography>
-                      <Typography><strong>Status:</strong> {projectData.status}</Typography>
+                      <Typography><strong>Status:</strong> 
+                        <Chip 
+                          label={projectData.status} 
+                          color={
+                            projectData.status === 'Completed' ? 'success' :
+                            projectData.status === 'In Progress' ? 'warning' : 'info'
+                          }
+                          size="small"
+                          sx={{ ml: 1 }}
+                        />
+                      </Typography>
                     </Grid>
                   </Grid>
                 </Card>
@@ -465,6 +519,26 @@ const ProjectPlanning = () => {
 
         <TabPanel value={tabValue} index={1}>
           <Grid container spacing={3}>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Filter by Directorate</InputLabel>
+                <Select
+                  value={directorateFilter}
+                  label="Filter by Directorate"
+                  onChange={(e) => setDirectorateFilter(e.target.value)}
+                >
+                  <MenuItem value="All">All Directorates</MenuItem>
+                  <MenuItem value="North">North</MenuItem>
+                  <MenuItem value="Centre">Centre</MenuItem>
+                  <MenuItem value="KPK">KPK</MenuItem>
+                  <MenuItem value="Baluchistan">Baluchistan</MenuItem>
+                  <MenuItem value="Sindh">Sindh</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal" required>
                 <InputLabel>Select Project</InputLabel>
@@ -474,7 +548,7 @@ const ProjectPlanning = () => {
                   label="Select Project"
                   onChange={handleTargetChange}
                 >
-                  {projects.map(project => (
+                  {filteredProjects.map(project => (
                     <MenuItem key={project.id} value={project.id}>
                       {project.name} - {project.directorate}
                     </MenuItem>
@@ -520,10 +594,20 @@ const ProjectPlanning = () => {
             <Grid item xs={12} md={6}>
               {targetData.projectId && (
                 <>
-                  <Typography variant="h6" gutterBottom>
-                    Monthly Targets
-                  </Typography>
-                  <TableContainer component={Paper}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Typography variant="h6">
+                      Monthly Targets
+                    </Typography>
+                    <Button 
+                      variant="outlined" 
+                      size="small"
+                      onClick={() => exportChartAsImage('targetsTable', 'targets-data')}
+                      startIcon={<ImageIcon />}
+                    >
+                      Export
+                    </Button>
+                  </Box>
+                  <TableContainer component={Paper} id="targetsTable">
                     <Table>
                       <TableHead>
                         <TableRow>
@@ -553,6 +637,37 @@ const ProjectPlanning = () => {
 
         <TabPanel value={tabValue} index={2}>
           <Grid container spacing={3}>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Filter by Directorate</InputLabel>
+                <Select
+                  value={directorateFilter}
+                  label="Filter by Directorate"
+                  onChange={(e) => setDirectorateFilter(e.target.value)}
+                >
+                  <MenuItem value="All">All Directorates</MenuItem>
+                  <MenuItem value="North">North</MenuItem>
+                  <MenuItem value="Centre">Centre</MenuItem>
+                  <MenuItem value="KPK">KPK</MenuItem>
+                  <MenuItem value="Baluchistan">Baluchistan</MenuItem>
+                  <MenuItem value="Sindh">Sindh</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showFinancialGraphs}
+                    onChange={(e) => setShowFinancialGraphs(e.target.checked)}
+                  />
+                }
+                label="Show Financial Graphs"
+              />
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal" required>
                 <InputLabel>Select Project</InputLabel>
@@ -562,7 +677,7 @@ const ProjectPlanning = () => {
                   label="Select Project"
                   onChange={handleBudgetChange}
                 >
-                  {projects.map(project => (
+                  {filteredProjects.map(project => (
                     <MenuItem key={project.id} value={project.id}>
                       {project.name} - {project.directorate}
                     </MenuItem>
@@ -667,16 +782,26 @@ const ProjectPlanning = () => {
             <Grid item xs={12} md={6}>
               {budgetData.projectId && (
                 <>
-                  <Typography variant="h6" gutterBottom>
-                    Budget Summary
-                  </Typography>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Typography variant="h6">
+                      Budget Summary
+                    </Typography>
+                    <Button 
+                      variant="outlined" 
+                      size="small"
+                      onClick={() => exportChartAsImage('budgetTable', 'budget-data')}
+                      startIcon={<ImageIcon />}
+                    >
+                      Export
+                    </Button>
+                  </Box>
                   {(() => {
                     const project = projects.find(p => p.id === budgetData.projectId);
                     const budget = project?.budget;
                     const totals = budget ? calculateBudgetTotals(budget, project) : null;
                     
                     return totals ? (
-                      <TableContainer component={Paper}>
+                      <TableContainer component={Paper} id="budgetTable">
                         <Table>
                           <TableBody>
                             <TableRow>
@@ -718,6 +843,26 @@ const ProjectPlanning = () => {
                       <Alert severity="info">No budget data available for this project.</Alert>
                     );
                   })()}
+
+                  {showFinancialGraphs && budgetData.projectId && (
+                    <Box sx={{ mt: 3 }}>
+                      <Typography variant="h6" gutterBottom>
+                        Financial Overview
+                      </Typography>
+                      <CustomBarChart
+                        data={[
+                          { name: 'Revenue', value: totals?.totalPlannedRevenue || 0 },
+                          { name: 'Direct Cost', value: totals?.totalDirectCost || 0 },
+                          { name: 'Overhead', value: totals?.totalOverheadCost || 0 },
+                          { name: 'Net Profit', value: totals?.plannedNetProfit || 0 }
+                        ]}
+                        title="Budget Breakdown"
+                        xAxisKey="name"
+                        barKey={['value']}
+                        color={['#3498db']}
+                      />
+                    </Box>
+                  )}
                 </>
               )}
             </Grid>
