@@ -18,8 +18,8 @@ import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import { useApp } from '../../contexts/AppContext';
-import { calculateKpisForProject } from '../../utils/calculations';
+import { useApp } from '../contexts/AppContext';
+import { calculateKpisForProject } from '../utils/calculations';
 import BarChart from '../Charts/BarChart';
 
 const Dashboard = () => {
