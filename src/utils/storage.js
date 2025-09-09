@@ -1,71 +1,86 @@
-// Local storage utilities for data persistence
+// Local storage functions
 
-export const getProjects = () => {
+export const loadState = () => {
   try {
-    const projects = localStorage.getItem('projects');
-    return projects ? JSON.parse(projects) : [];
+    const serializedState = localStorage.getItem('appState');
+    return serializedState ? JSON.parse(serializedState) : null;
   } catch (error) {
-    console.error('Error loading projects from storage:', error);
-    return [];
+    console.error('Error loading state from localStorage:', error);
+    return null;
   }
 };
 
-export const saveProjects = (projects) => {
+export const saveState = (state) => {
   try {
-    localStorage.setItem('projects', JSON.stringify(projects));
+    const serializedState = JSON.stringify({
+      projects: state.projects,
+      currency: state.currency,
+      filters: state.filters,
+      kpiThresholds: state.kpiThresholds,
+      darkMode: state.darkMode
+    });
+    localStorage.setItem('appState', serializedState);
   } catch (error) {
-    console.error('Error saving projects to storage:', error);
+    console.error('Error saving state to localStorage:', error);
   }
 };
 
-export const getProject = (projectId) => {
-  const projects = getProjects();
-  return projects.find(p => p.id === projectId);
+export const loadSettings = () => {
+  try {
+    const serializedSettings = localStorage.getItem('appSettings');
+    return serializedSettings ? JSON.parse(serializedSettings) : null;
+  } catch (error) {
+    console.error('Error loading settings from localStorage:', error);
+    return null;
+  }
 };
 
-export const saveProject = (project) => {
-  const projects = getProjects();
-  const existingIndex = projects.findIndex(p => p.id === project.id);
+export const saveSettings = (settings) => {
+  try {
+    const serializedSettings = JSON.stringify(settings);
+    localStorage.setItem('appSettings', serializedSettings);
+  } catch (error) {
+    console.error('Error saving settings to localStorage:', error);
+  }
+};
+
+export const clearStorage = () => {
+  try {
+    localStorage.removeItem('appState');
+    localStorage.removeItem('appSettings');
+  } catch (error) {
+    console.error('Error clearing localStorage:', error);
+  }
+};
+
+export const exportData = (data, filename = 'export.json') => {
+  const dataStr = JSON.stringify(data, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
   
-  if (existingIndex >= 0) {
-    projects[existingIndex] = project;
-  } else {
-    projects.push(project);
-  }
-  
-  saveProjects(projects);
+  // Create download link
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(dataBlob);
+  link.download = filename;
+  link.click();
 };
 
-export const deleteProject = (projectId) => {
-  const projects = getProjects();
-  const filteredProjects = projects.filter(p => p.id !== projectId);
-  saveProjects(filteredProjects);
-};
-
-export const getAppSettings = () => {
-  try {
-    const settings = localStorage.getItem('appSettings');
-    return settings ? JSON.parse(settings) : {
-      currency: 'PKR',
-      numberFormat: true,
-      theme: 'light',
-      dateFormat: 'YYYY-MM-DD',
+export const importData = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        resolve(data);
+      } catch (error) {
+        reject(new Error('Invalid JSON file'));
+      }
     };
-  } catch (error) {
-    console.error('Error loading app settings:', error);
-    return {
-      currency: 'PKR',
-      numberFormat: true,
-      theme: 'light',
-      dateFormat: 'YYYY-MM-DD',
+    
+    reader.onerror = () => {
+      reject(new Error('Error reading file'));
     };
-  }
-};
-
-export const saveAppSettings = (settings) => {
-  try {
-    localStorage.setItem('appSettings', JSON.stringify(settings));
-  } catch (error) {
-    console.error('Error saving app settings:', error);
-  }
+    
+    reader.readAsText(file);
+  });
 };
