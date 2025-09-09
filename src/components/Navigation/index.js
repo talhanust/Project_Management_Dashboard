@@ -25,7 +25,7 @@ import {
   Brightness7 as LightIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useApp } from '../../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 
 const Navigation = () => {
   const theme = useTheme();
