@@ -56,20 +56,15 @@ const ProjectMonitoring = () => {
     expenditures: {}
   });
 
-  const [progressFilters, setProgressFilters] = useState({
-    directorate: 'All',
-    status: 'All'
-  });
+  const [filteredProjects, setFilteredProjects] = useState(projects);
 
-  const [financialFilters, setFinancialFilters] = useState({
-    directorate: 'All',
-    status: 'All'
-  });
-
-  const [kpiFilters, setKpiFilters] = useState({
-    directorate: 'All',
-    status: 'All'
-  });
+  useEffect(() => {
+    if (filters.directorate === 'All') {
+      setFilteredProjects(projects);
+    } else {
+      setFilteredProjects(projects.filter(p => p.directorate === filters.directorate));
+    }
+  }, [filters.directorate, projects]);
 
   useEffect(() => {
     // Load saved progress data if available
@@ -178,44 +173,12 @@ const ProjectMonitoring = () => {
     });
   };
 
-  const handleProgressFilterChange = (field, value) => {
-    setProgressFilters(prev => ({
+  const handleDirectorateFilterChange = (value) => {
+    setFilters(prev => ({
       ...prev,
-      [field]: value
+      directorate: value
     }));
   };
-
-  const handleFinancialFilterChange = (field, value) => {
-    setFinancialFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleKpiFilterChange = (field, value) => {
-    setKpiFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const filteredProgressProjects = projects.filter(project => {
-    if (progressFilters.directorate !== 'All' && project.directorate !== progressFilters.directorate) return false;
-    if (progressFilters.status !== 'All' && project.status !== progressFilters.status) return false;
-    return true;
-  });
-
-  const filteredFinancialProjects = projects.filter(project => {
-    if (financialFilters.directorate !== 'All' && project.directorate !== financialFilters.directorate) return false;
-    if (financialFilters.status !== 'All' && project.status !== financialFilters.status) return false;
-    return true;
-  });
-
-  const filteredKpiProjects = projects.filter(project => {
-    if (kpiFilters.directorate !== 'All' && project.directorate !== kpiFilters.directorate) return false;
-    if (kpiFilters.status !== 'All' && project.status !== kpiFilters.status) return false;
-    return true;
-  });
 
   const expenditureHeads = [
     'Subcontractor Cost',
@@ -256,147 +219,13 @@ const ProjectMonitoring = () => {
 
         <TabPanel value={tabValue} index={0}>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth margin="normal" required>
-                <InputLabel>Select Project</InputLabel>
-                <Select
-                  value={selectedProjectId}
-                  label="Select Project"
-                  onChange={handleProjectChange}
-                >
-                  {projects.map(project => (
-                    <MenuItem key={project.id} value={project.id}>
-                      {project.name} - {project.directorate}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              {selectedProjectId && (
-                <>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                    Section 1: Previous Month Data
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    label="Upto Date Actual Work Done Previous Month"
-                    type="number"
-                    value={progressData.previousMonth.actualWorkDone}
-                    onChange={(e) => handleProgressChange('previousMonth', 'actualWorkDone', e.target.value)}
-                    margin="normal"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Escalation Percentage Upto Previous Month (%)"
-                    type="number"
-                    value={progressData.previousMonth.escalationPercentage}
-                    onChange={(e) => handleProgressChange('previousMonth', 'escalationPercentage', e.target.value)}
-                    margin="normal"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Total Vetted Revenue Upto Previous Month"
-                    type="number"
-                    value={progressData.previousMonth.vettedRevenue}
-                    onChange={(e) => handleProgressChange('previousMonth', 'vettedRevenue', e.target.value)}
-                    margin="normal"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Total Amount Received Upto Previous Month"
-                    type="number"
-                    value={progressData.previousMonth.amountReceived}
-                    onChange={(e) => handleProgressChange('previousMonth', 'amountReceived', e.target.value)}
-                    margin="normal"
-                  />
-
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                    Section 2: Current Month Data
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    label="Work Done During Month"
-                    type="number"
-                    value={progressData.currentMonth.workDone}
-                    onChange={(e) => handleProgressChange('currentMonth', 'workDone', e.target.value)}
-                    margin="normal"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Escalation Percentage During Month (%)"
-                    type="number"
-                    value={progressData.currentMonth.escalationPercentage}
-                    onChange={(e) => handleProgressChange('currentMonth', 'escalationPercentage', e.target.value)}
-                    margin="normal"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Vetted Revenue During Month"
-                    type="number"
-                    value={progressData.currentMonth.vettedRevenue}
-                    onChange={(e) => handleProgressChange('currentMonth', 'vettedRevenue', e.target.value)}
-                    margin="normal"
-                  />
-                  <TextField
-                    fullWidth
-                    label="Amount Received During Month"
-                    type="number"
-                    value={progressData.currentMonth.amountReceived}
-                    onChange={(e) => handleProgressChange('currentMonth', 'amountReceived', e.target.value)}
-                    margin="normal"
-                  />
-
-                  <Button
-                    variant="contained"
-                    onClick={handleSaveProgress}
-                    startIcon={<SaveIcon />}
-                    sx={{ mt: 2 }}
-                  >
-                    Save Progress
-                  </Button>
-                </>
-              )}
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              {selectedProjectId && (
-                <>
-                  <Typography variant="h6" gutterBottom>
-                    Section 5: Expenditures
-                  </Typography>
-                  {expenditureHeads.map(head => (
-                    <TextField
-                      key={head}
-                      fullWidth
-                      label={head}
-                      type="number"
-                      value={progressData.expenditures[head] || ''}
-                      onChange={(e) => handleExpenditureChange(head, e.target.value)}
-                      margin="normal"
-                    />
-                  ))}
-
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                    Section 3 & 4: Calculated Values
-                  </Typography>
-                  <Alert severity="info" sx={{ mb: 2 }}>
-                    These values will be calculated automatically when you save the progress.
-                  </Alert>
-                </>
-              )}
-            </Grid>
-          </Grid>
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={1}>
-          <Grid container spacing={3}>
             <Grid item xs={12} md={3}>
               <FormControl fullWidth margin="normal">
                 <InputLabel>Filter by Directorate</InputLabel>
                 <Select
-                  value={progressFilters.directorate}
+                  value={filters.directorate}
                   label="Filter by Directorate"
-                  onChange={(e) => handleProgressFilterChange('directorate', e.target.value)}
+                  onChange={(e) => handleDirectorateFilterChange(e.target.value)}
                 >
                   <MenuItem value="All">All</MenuItem>
                   <MenuItem value="North">North</MenuItem>
@@ -408,17 +237,177 @@ const ProjectMonitoring = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={3}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Filter by Status</InputLabel>
+              <FormControl fullWidth margin="normal" required>
+                <InputLabel>Select Project</InputLabel>
                 <Select
-                  value={progressFilters.status}
-                  label="Filter by Status"
-                  onChange={(e) => handleProgressFilterChange('status', e.target.value)}
+                  value={selectedProjectId}
+                  label="Select Project"
+                  onChange={handleProjectChange}
+                >
+                  <MenuItem value="">Select a Project</MenuItem>
+                  {filteredProjects.map(project => (
+                    <MenuItem key={project.id} value={project.id}>
+                      {project.name} - {project.directorate}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+          {selectedProjectId && (
+            <Grid container spacing={3} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                  Section 1: Previous Month Data
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Upto Date Actual Work Done Previous Month"
+                  type="number"
+                  value={progressData.previousMonth.actualWorkDone}
+                  onChange={(e) => handleProgressChange('previousMonth', 'actualWorkDone', e.target.value)}
+                  margin="normal"
+                />
+                <TextField
+                  fullWidth
+                  label="Escalation Percentage Upto Previous Month (%)"
+                  type="number"
+                  value={progressData.previousMonth.escalationPercentage}
+                  onChange={(e) => handleProgressChange('previousMonth', 'escalationPercentage', e.target.value)}
+                  margin="normal"
+                />
+                <TextField
+                  fullWidth
+                  label="Total Vetted Revenue Upto Previous Month"
+                  type="number"
+                  value={progressData.previousMonth.vettedRevenue}
+                  onChange={(e) => handleProgressChange('previousMonth', 'vettedRevenue', e.target.value)}
+                  margin="normal"
+                />
+                <TextField
+                  fullWidth
+                  label="Total Amount Received Upto Previous Month"
+                  type="number"
+                  value={progressData.previousMonth.amountReceived}
+                  onChange={(e) => handleProgressChange('previousMonth', 'amountReceived', e.target.value)}
+                  margin="normal"
+                />
+
+                <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                  Section 2: Current Month Data
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Work Done During Month"
+                  type="number"
+                  value={progressData.currentMonth.workDone}
+                  onChange={(e) => handleProgressChange('currentMonth', 'workDone', e.target.value)}
+                  margin="normal"
+                />
+                <TextField
+                  fullWidth
+                  label="Escalation Percentage During Month (%)"
+                  type="number"
+                  value={progressData.currentMonth.escalationPercentage}
+                  onChange={(e) => handleProgressChange('currentMonth', 'escalationPercentage', e.target.value)}
+                  margin="normal"
+                />
+                <TextField
+                  fullWidth
+                  label="Vetted Revenue During Month"
+                  type="number"
+                  value={progressData.currentMonth.vettedRevenue}
+                  onChange={(e) => handleProgressChange('currentMonth', 'vettedRevenue', e.target.value)}
+                  margin="normal"
+                />
+                <TextField
+                  fullWidth
+                  label="Amount Received During Month"
+                  type="number"
+                  value={progressData.currentMonth.amountReceived}
+                  onChange={(e) => handleProgressChange('currentMonth', 'amountReceived', e.target.value)}
+                  margin="normal"
+                />
+
+                <Button
+                  variant="contained"
+                  onClick={handleSaveProgress}
+                  startIcon={<SaveIcon />}
+                  sx={{ mt: 2 }}
+                >
+                  Save Progress
+                </Button>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Typography variant="h6" gutterBottom>
+                  Section 5: Expenditures
+                </Typography>
+                {expenditureHeads.map(head => (
+                  <TextField
+                    key={head}
+                    fullWidth
+                    label={head}
+                    type="number"
+                    value={progressData.expenditures[head] || ''}
+                    onChange={(e) => handleExpenditureChange(head, e.target.value)}
+                    margin="normal"
+                  />
+                ))}
+
+                <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                  Project Status
+                </Typography>
+                {selectedProjectId && (
+                  <Paper sx={{ p: 2 }}>
+                    <Typography variant="body1">
+                      <strong>Project:</strong> {projects.find(p => p.id === selectedProjectId)?.name}
+                    </Typography>
+                    <Typography variant="body1">
+                      <strong>Directorate:</strong> {projects.find(p => p.id === selectedProjectId)?.directorate}
+                    </Typography>
+                    <Typography variant="body1">
+                      <strong>Status:</strong> 
+                      <Chip 
+                        label={projects.find(p => p.id === selectedProjectId)?.status} 
+                        color={
+                          projects.find(p => p.id === selectedProjectId)?.status === 'Completed' ? 'success' :
+                          projects.find(p => p.id === selectedProjectId)?.status === 'In Progress' ? 'warning' : 'info'
+                        }
+                        sx={{ ml: 1 }}
+                      />
+                    </Typography>
+                  </Paper>
+                )}
+
+                <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                  Section 3 & 4: Calculated Values
+                </Typography>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  These values will be calculated automatically when you save the progress.
+                </Alert>
+              </Grid>
+            </Grid>
+          )}
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={1}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Filter by Directorate</InputLabel>
+                <Select
+                  value={filters.directorate}
+                  label="Filter by Directorate"
+                  onChange={(e) => handleDirectorateFilterChange(e.target.value)}
                 >
                   <MenuItem value="All">All</MenuItem>
-                  <MenuItem value="Planning">Planning</MenuItem>
-                  <MenuItem value="In Progress">In Progress</MenuItem>
-                  <MenuItem value="Completed">Completed</MenuItem>
+                  <MenuItem value="North">North</MenuItem>
+                  <MenuItem value="Centre">Centre</MenuItem>
+                  <MenuItem value="KPK">KPK</MenuItem>
+                  <MenuItem value="Baluchistan">Baluchistan</MenuItem>
+                  <MenuItem value="Sindh">Sindh</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -433,6 +422,8 @@ const ProjectMonitoring = () => {
                 <TableRow>
                   <TableCell>Project ID</TableCell>
                   <TableCell>Project Name</TableCell>
+                  <TableCell>Directorate</TableCell>
+                  <TableCell>Status</TableCell>
                   <TableCell>CA Value</TableCell>
                   <TableCell>Planned Revenue</TableCell>
                   <TableCell>Actual Revenue</TableCell>
@@ -440,7 +431,7 @@ const ProjectMonitoring = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredProgressProjects.map(project => {
+                {filteredProjects.map(project => {
                   const kpis = calculateProjectKPIs(project);
                   const plannedRevenue = project.targets ? 
                     project.targets.reduce((sum, target) => sum + (target.value || 0), 0) : 0;
@@ -449,6 +440,18 @@ const ProjectMonitoring = () => {
                     <TableRow key={project.id}>
                       <TableCell>{project.id}</TableCell>
                       <TableCell>{project.name}</TableCell>
+                      <TableCell>{project.directorate}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={project.status} 
+                          color={
+                            project.status === 'Completed' ? 'success' :
+                            project.status === 'In Progress' ? 'warning' :
+                            project.status === 'Planning' ? 'info' : 'default'
+                          }
+                          size="small"
+                        />
+                      </TableCell>
                       <TableCell>{formatCurrency(project.caValue || 0)}</TableCell>
                       <TableCell>{formatCurrency(plannedRevenue)}</TableCell>
                       <TableCell>{formatCurrency(kpis.actualRevenue || 0)}</TableCell>
@@ -475,7 +478,7 @@ const ProjectMonitoring = () => {
             Progress Comparison Chart
           </Typography>
           <CustomBarChart
-            data={filteredProgressProjects.map(project => {
+            data={filteredProjects.map(project => {
               const kpis = calculateProjectKPIs(project);
               const plannedRevenue = project.targets ? 
                 project.targets.reduce((sum, target) => sum + (target.value || 0), 0) : 0;
@@ -499,9 +502,9 @@ const ProjectMonitoring = () => {
               <FormControl fullWidth margin="normal">
                 <InputLabel>Filter by Directorate</InputLabel>
                 <Select
-                  value={financialFilters.directorate}
+                  value={filters.directorate}
                   label="Filter by Directorate"
-                  onChange={(e) => handleFinancialFilterChange('directorate', e.target.value)}
+                  onChange={(e) => handleDirectorateFilterChange(e.target.value)}
                 >
                   <MenuItem value="All">All</MenuItem>
                   <MenuItem value="North">North</MenuItem>
@@ -509,21 +512,6 @@ const ProjectMonitoring = () => {
                   <MenuItem value="KPK">KPK</MenuItem>
                   <MenuItem value="Baluchistan">Baluchistan</MenuItem>
                   <MenuItem value="Sindh">Sindh</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Filter by Status</InputLabel>
-                <Select
-                  value={financialFilters.status}
-                  label="Filter by Status"
-                  onChange={(e) => handleFinancialFilterChange('status', e.target.value)}
-                >
-                  <MenuItem value="All">All</MenuItem>
-                  <MenuItem value="Planning">Planning</MenuItem>
-                  <MenuItem value="In Progress">In Progress</MenuItem>
-                  <MenuItem value="Completed">Completed</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -538,6 +526,7 @@ const ProjectMonitoring = () => {
                 <TableRow>
                   <TableCell>Project ID</TableCell>
                   <TableCell>Project Name</TableCell>
+                  <TableCell>Directorate</TableCell>
                   <TableCell>CA Value</TableCell>
                   <TableCell>Actual Revenue</TableCell>
                   <TableCell>Vetted Revenue</TableCell>
@@ -547,12 +536,13 @@ const ProjectMonitoring = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredFinancialProjects.map(project => {
+                {filteredProjects.map(project => {
                   const kpis = calculateProjectKPIs(project);
                   return (
                     <TableRow key={project.id}>
                       <TableCell>{project.id}</TableCell>
                       <TableCell>{project.name}</TableCell>
+                      <TableCell>{project.directorate}</TableCell>
                       <TableCell>{formatCurrency(project.caValue || 0)}</TableCell>
                       <TableCell>{formatCurrency(kpis.actualRevenue || 0)}</TableCell>
                       <TableCell>{formatCurrency(kpis.vettedRevenue || 0)}</TableCell>
@@ -597,6 +587,7 @@ const ProjectMonitoring = () => {
                 <TableRow>
                   <TableCell>Project ID</TableCell>
                   <TableCell>Project Name</TableCell>
+                  <TableCell>Directorate</TableCell>
                   <TableCell>CA Value</TableCell>
                   <TableCell>Actual Revenue</TableCell>
                   <TableCell>Expenditure</TableCell>
@@ -605,7 +596,7 @@ const ProjectMonitoring = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredFinancialProjects.map(project => {
+                {filteredProjects.map(project => {
                   const kpis = calculateProjectKPIs(project);
                   const totalExpenditure = Object.values(kpis.expenditures || {}).reduce((sum, val) => sum + (val || 0), 0);
                   const costVariance = (kpis.actualRevenue || 0) - totalExpenditure;
@@ -615,6 +606,7 @@ const ProjectMonitoring = () => {
                     <TableRow key={project.id}>
                       <TableCell>{project.id}</TableCell>
                       <TableCell>{project.name}</TableCell>
+                      <TableCell>{project.directorate}</TableCell>
                       <TableCell>{formatCurrency(project.caValue || 0)}</TableCell>
                       <TableCell>{formatCurrency(kpis.actualRevenue || 0)}</TableCell>
                       <TableCell>{formatCurrency(totalExpenditure)}</TableCell>
@@ -648,9 +640,9 @@ const ProjectMonitoring = () => {
               <FormControl fullWidth margin="normal">
                 <InputLabel>Filter by Directorate</InputLabel>
                 <Select
-                  value={kpiFilters.directorate}
+                  value={filters.directorate}
                   label="Filter by Directorate"
-                  onChange={(e) => handleKpiFilterChange('directorate', e.target.value)}
+                  onChange={(e) => handleDirectorateFilterChange(e.target.value)}
                 >
                   <MenuItem value="All">All</MenuItem>
                   <MenuItem value="North">North</MenuItem>
@@ -658,21 +650,6 @@ const ProjectMonitoring = () => {
                   <MenuItem value="KPK">KPK</MenuItem>
                   <MenuItem value="Baluchistan">Baluchistan</MenuItem>
                   <MenuItem value="Sindh">Sindh</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Filter by Status</InputLabel>
-                <Select
-                  value={kpiFilters.status}
-                  label="Filter by Status"
-                  onChange={(e) => handleKpiFilterChange('status', e.target.value)}
-                >
-                  <MenuItem value="All">All</MenuItem>
-                  <MenuItem value="Planning">Planning</MenuItem>
-                  <MenuItem value="In Progress">In Progress</MenuItem>
-                  <MenuItem value="Completed">Completed</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -687,6 +664,7 @@ const ProjectMonitoring = () => {
                 <TableRow>
                   <TableCell>Project ID</TableCell>
                   <TableCell>Project Name</TableCell>
+                  <TableCell>Directorate</TableCell>
                   <TableCell>Lag</TableCell>
                   <TableCell>Scope Creep</TableCell>
                   <TableCell>Cost Variance</TableCell>
@@ -696,7 +674,7 @@ const ProjectMonitoring = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredKpiProjects.map(project => {
+                {filteredProjects.map(project => {
                   const kpis = calculateProjectKPIs(project);
                   const plannedRevenue = project.targets ? 
                     project.targets.reduce((sum, target) => sum + (target.value || 0), 0) : 0;
@@ -718,6 +696,7 @@ const ProjectMonitoring = () => {
                     <TableRow key={project.id}>
                       <TableCell>{project.id}</TableCell>
                       <TableCell>{project.name}</TableCell>
+                      <TableCell>{project.directorate}</TableCell>
                       <TableCell>
                         <Chip 
                           label={`${formatCurrency(lag)} (${lagPercentage.toFixed(2)}%)`} 
