@@ -12,22 +12,44 @@ import ExecutiveReports from './components/ExecutiveReports';
 import Settings from './components/Settings';
 import Navigation from './components/Navigation';
 
-const theme = createTheme({
+const getDesignTokens = (mode) => ({
   palette: {
-    primary: {
-      main: '#2c3e50',
-      light: '#3c4c5e',
-      dark: '#1c2a38',
-    },
-    secondary: {
-      main: '#3498db',
-      light: '#5faee3',
-      dark: '#1d6fa5',
-    },
-    background: {
-      default: '#f8f9fa',
-      paper: '#ffffff',
-    },
+    mode,
+    ...(mode === 'light'
+      ? {
+          // Light mode palette
+          primary: {
+            main: '#2c3e50',
+            light: '#3c4c5e',
+            dark: '#1c2a38',
+          },
+          secondary: {
+            main: '#3498db',
+            light: '#5faee3',
+            dark: '#1d6fa5',
+          },
+          background: {
+            default: '#f8f9fa',
+            paper: '#ffffff',
+          },
+        }
+      : {
+          // Dark mode palette
+          primary: {
+            main: '#3498db',
+            light: '#5faee3',
+            dark: '#1d6fa5',
+          },
+          secondary: {
+            main: '#2c3e50',
+            light: '#3c4c5e',
+            dark: '#1c2a38',
+          },
+          background: {
+            default: '#121212',
+            paper: '#1e1e1e',
+          },
+        }),
     success: {
       main: '#27ae60',
       light: '#52c47e',
@@ -76,10 +98,20 @@ const theme = createTheme({
         },
       },
     },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: mode === 'light' ? '#2c3e50' : '#1c2a38',
+        },
+      },
+    },
   },
 });
 
 function App() {
+  const { darkMode } = useApp(); // This would need to be moved to a separate component or use context
+  const theme = React.useMemo(() => createTheme(getDesignTokens(darkMode ? 'dark' : 'light')), [darkMode]);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
