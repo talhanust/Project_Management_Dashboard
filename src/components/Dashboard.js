@@ -12,7 +12,13 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Chip
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -22,11 +28,11 @@ import {
   Warning as WarningIcon,
   AccountBalance as FinanceIcon
 } from '@mui/icons-material';
-import { useApp } from '../contexts/AppContext';
+import { useAppContext } from '../contexts/AppContext';
 import CustomBarChart from './BarChart';
 
 const Dashboard = () => {
-  const { projects, formatCurrency, calculateProjectKPIs, calculateRiskLevels } = useApp();
+  const { projects, formatCurrency, calculateProjectKPIs, calculateRiskLevels } = useAppContext();
   const [stats, setStats] = useState({
     total: 0,
     inProgress: 0,
@@ -311,7 +317,7 @@ const Dashboard = () => {
                     </Typography>
                     <Box display="flex" justifyContent="space-between">
                       <Typography variant="body2" color="textSecondary">
-                        Directorates: {project.directorate || 'Not specified'}
+                        Directorate: {project.directorate || 'Not specified'}
                       </Typography>
                       <Typography 
                         variant="body2" 
