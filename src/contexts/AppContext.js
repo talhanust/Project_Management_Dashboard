@@ -132,6 +132,33 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  // Safe calculateStatistics function with error handling
+  const safeCalculateStatistics = () => {
+    try {
+      return calculateStatistics(
+        state.projects, 
+        calculateProjectKPIs, 
+        (project, kpis) => calculateRiskLevels(project, kpis, state.kpiThresholds),
+        state.kpiThresholds
+      );
+    } catch (error) {
+      console.error("Error calculating statistics:", error);
+      // Return a default statistics object to prevent crashes
+      return {
+        totalProjects: 0,
+        completedProjects: 0,
+        inProgressProjects: 0,
+        planningProjects: 0,
+        highRisk: 0,
+        mediumRisk: 0,
+        lowRisk: 0,
+        totalRevenue: 0,
+        totalExpenditure: 0,
+        netProfit: 0
+      };
+    }
+  };
+
   // Context value
   const value = {
     ...state,
@@ -155,12 +182,7 @@ export const AppProvider = ({ children }) => {
     calculateProjectKPIs: (project) => calculateProjectKPIs(project),
     calculateRiskLevels: (project, kpis) => calculateRiskLevels(project, kpis, state.kpiThresholds),
     calculateProgressPercentage,
-    calculateStatistics: () => calculateStatistics(
-      state.projects, 
-      calculateProjectKPIs, 
-      (project, kpis) => calculateRiskLevels(project, kpis, state.kpiThresholds),
-      state.kpiThresholds
-    ),
+    calculateStatistics: safeCalculateStatistics,
     getFilteredProjects
   };
 
