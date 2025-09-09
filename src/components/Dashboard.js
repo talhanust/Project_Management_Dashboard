@@ -18,20 +18,29 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Assignment as AssignmentIcon,
   Schedule as ScheduleIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
-  AccountBalance as FinanceIcon
+  AccountBalance as FinanceIcon,
+  PictureAsPdf as PdfIcon,
+  Image as ImageIcon
 } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
 import CustomBarChart from './BarChart';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const Dashboard = () => {
-  const { projects, formatCurrency, calculateProjectKPIs, calculateRiskLevels } = useApp();
+  const { projects, formatCurrency, calculateProjectKPIs, calculateRiskLevels, deleteProject } = useApp();
   const [stats, setStats] = useState({
     total: 0,
     inProgress: 0,
@@ -46,62 +55,73 @@ const Dashboard = () => {
   const [recentProjects, setRecentProjects] = useState([]);
   const [highRiskProjects, setHighRiskProjects] = useState([]);
   const [filter, setFilter] = useState('All');
+  const [selectedProject, setSelectedProject] = useState('All');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
 
   useEffect(() => {
     if (projects) {
-      // Calculate statistics
-      const total = projects.length;
-      const inProgress = projects.filter(p => p.status === 'In Progress').length;
-      const completed = projects.filter(p => p.status === 'Completed').length;
-      const planning = projects.filter(p => p.status === 'Planning').length;
-      
-      // Calculate financial totals
-      const totalCAValue = projects.reduce((sum, p) => sum + (p.caValue || 0), 0);
-      
-      let totalRevenue = 0;
-      let totalExpenditure = 0;
-      let highRiskCount = 0;
-      const highRiskProjectsList = [];
-      
-      projects.forEach(project => {
-        const kpis = calculateProjectKPIs(project);
-        const riskLevels = calculateRiskLevels(project, kpis);
-        
-        totalRevenue += kpis.actualRevenue || 0;
-        totalExpenditure += riskLevels.totalExpenditure || 0;
-        
-        // Check if project is high risk
-        if (riskLevels.lagRisk === 'High' || riskLevels.lagRisk === 'Danger' ||
-            riskLevels.scopeCreepRisk === 'High' || riskLevels.scopeCreepRisk === 'Danger' ||
-            riskLevels.profitabilityRisk === 'Risk' || riskLevels.profitabilityRisk === 'Danger' ||
-            riskLevels.slippageRisk === 'High' || riskLevels.slippageRisk === 'Danger' ||
-            riskLevels.receivableRisk === 'High' || riskLevels.receivableRisk === 'Danger') {
-          highRiskCount++;
-          highRiskProjectsList.push({ project, riskLevels });
-        }
-      });
-
-      setStats({
-        total,
-        inProgress,
-        completed,
-        planning,
-        highRisk: highRiskCount,
-        totalCAValue,
-        totalRevenue,
-        totalExpenditure
-      });
-
-      // Get recent projects (last 5)
-      const sortedProjects = [...projects]
-        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-        .slice(0, 5);
-
-      setRecentProjects(sortedProjects);
-      setHighRiskProjects(highRiskProjectsList);
-      setLoading(false);
+      calculateStats();
     }
-  }, [projects, calculateProjectKPIs, calculateRiskLevels]);
+  }, [projects, filter, selectedProject]);
+
+  const calculateStats = () => {
+    const filteredProjects = filter === 'All' 
+      ? projects 
+      : projects.filter(p => p.directorate === filter);
+    
+    const projectSpecific = selectedProject !== 'All' 
+      ? filteredProjects.filter(p => p.id === selectedProject)
+      : filteredProjects;
+
+    const total = projectSpecific.length;
+    const inProgress = projectSpecific.filter(p => p.status === 'In Progress').length;
+    const completed = projectSpecific.filter(p => p.status === 'Completed').length;
+    const planning = projectSpecific.filter(p => p.status === 'Planning').length;
+    
+    const totalCAValue = projectSpecific.reduce((sum, p) => sum + (p.caValue || 0), 0);
+    
+    let totalRevenue = 0;
+    let totalExpenditure = 0;
+    let highRiskCount = 0;
+    const highRiskProjectsList = [];
+    
+    projectSpecific.forEach(project => {
+      const kpis = calculateProjectKPIs(project);
+      const riskLevels = calculateRiskLevels(project, kpis);
+      
+      totalRevenue += kpis.actualRevenue || 0;
+      totalExpenditure += riskLevels.totalExpenditure || 0;
+      
+      if (riskLevels.lagRisk === 'High' || riskLevels.lagRisk === 'Danger' ||
+          riskLevels.scopeCreepRisk === 'High' || riskLevels.scopeCreepRisk === 'Danger' ||
+          riskLevels.profitabilityRisk === 'Risk' || riskLevels.profitabilityRisk === 'Danger' ||
+          riskLevels.slippageRisk === 'High' || riskLevels.slippageRisk === 'Danger' ||
+          riskLevels.receivableRisk === 'High' || riskLevels.receivableRisk === 'Danger') {
+        highRiskCount++;
+        highRiskProjectsList.push({ project, riskLevels });
+      }
+    });
+
+    setStats({
+      total,
+      inProgress,
+      completed,
+      planning,
+      highRisk: highRiskCount,
+      totalCAValue,
+      totalRevenue,
+      totalExpenditure
+    });
+
+    const sortedProjects = [...projectSpecific]
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, 5);
+
+    setRecentProjects(sortedProjects);
+    setHighRiskProjects(highRiskProjectsList);
+    setLoading(false);
+  };
 
   const directorateStats = [
     'North', 'Centre', 'KPK', 'Baluchistan', 'Sindh'
@@ -119,6 +139,42 @@ const Dashboard = () => {
     }, 0)
   }));
 
+  const exportChartAsImage = (chartId, filename) => {
+    const chartElement = document.getElementById(chartId);
+    html2canvas(chartElement).then(canvas => {
+      const link = document.createElement('a');
+      link.download = `${filename}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    });
+  };
+
+  const exportAsPDF = () => {
+    const dashboardElement = document.getElementById('dashboard-content');
+    html2canvas(dashboardElement).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save('dashboard-report.pdf');
+    });
+  };
+
+  const handleDeleteProject = (projectId) => {
+    setProjectToDelete(projectId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (projectToDelete) {
+      deleteProject(projectToDelete);
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -128,13 +184,22 @@ const Dashboard = () => {
   }
 
   return (
-    <Box p={3}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Dashboard
-      </Typography>
+    <Box p={3} id="dashboard-content">
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1">
+          Dashboard
+        </Typography>
+        <Button
+          variant="outlined"
+          onClick={exportAsPDF}
+          startIcon={<PdfIcon />}
+        >
+          Export as PDF
+        </Button>
+      </Box>
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={4}>
           <FormControl fullWidth>
             <InputLabel>Filter by Directorate</InputLabel>
             <Select
@@ -145,23 +210,51 @@ const Dashboard = () => {
               <MenuItem value="All">All Directorates</MenuItem>
               <MenuItem value="North">North</MenuItem>
               <MenuItem value="Centre">Centre</MenuItem>
-              <MenuItem value='KPK'>KPK</MenuItem>
-              <MenuItem value='Baluchistan'>Baluchistan</MenuItem>
-              <MenuItem value='Sindh'>Sindh</MenuItem>
+              <MenuItem value="KPK">KPK</MenuItem>
+              <MenuItem value="Baluchistan">Baluchistan</MenuItem>
+              <MenuItem value="Sindh">Sindh</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <FormControl fullWidth>
+            <InputLabel>Select Project</InputLabel>
+            <Select
+              value={selectedProject}
+              label="Select Project"
+              onChange={(e) => setSelectedProject(e.target.value)}
+            >
+              <MenuItem value="All">All Projects</MenuItem>
+              {projects
+                .filter(p => filter === 'All' || p.directorate === filter)
+                .map(project => (
+                  <MenuItem key={project.id} value={project.id}>
+                    {project.name}
+                  </MenuItem>
+                ))
+              }
             </Select>
           </FormControl>
         </Grid>
       </Grid>
 
-      {/* Statistics Cards */}
+      {highRiskProjects.length > 0 && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <Typography variant="h6">Projects Needing Attention</Typography>
+          {highRiskProjects.slice(0, 3).map(({ project }) => (
+            <Typography key={project.id}>• {project.name} - {project.directorate}</Typography>
+          ))}
+        </Alert>
+      )}
+
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={2.4}>
-          <Card elevation={2}>
+          <Card elevation={2} sx={{ background: 'linear-gradient(45deg, #2c3e50, #3498db)', color: 'white' }}>
             <CardContent>
               <Box display="flex" alignItems="center">
-                <AssignmentIcon color="primary" sx={{ fontSize: 40, mr: 2 }} />
+                <AssignmentIcon sx={{ fontSize: 40, mr: 2 }} />
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography gutterBottom>
                     Total Projects
                   </Typography>
                   <Typography variant="h4" component="div">
@@ -174,12 +267,12 @@ const Dashboard = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={2.4}>
-          <Card elevation={2}>
+          <Card elevation={2} sx={{ background: 'linear-gradient(45deg, #f39c12, #f5b143)', color: 'white' }}>
             <CardContent>
               <Box display="flex" alignItems="center">
-                <ScheduleIcon color="warning" sx={{ fontSize: 40, mr: 2 }} />
+                <ScheduleIcon sx={{ fontSize: 40, mr: 2 }} />
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography gutterBottom>
                     In Progress
                   </Typography>
                   <Typography variant="h4" component="div">
@@ -192,12 +285,12 @@ const Dashboard = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={2.4}>
-          <Card elevation={2}>
+          <Card elevation={2} sx={{ background: 'linear-gradient(45deg, #27ae60, #2ecc71)', color: 'white' }}>
             <CardContent>
               <Box display="flex" alignItems="center">
-                <CheckCircleIcon color="success" sx={{ fontSize: 40, mr: 2 }} />
+                <CheckCircleIcon sx={{ fontSize: 40, mr: 2 }} />
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography gutterBottom>
                     Completed
                   </Typography>
                   <Typography variant="h4" component="div">
@@ -210,12 +303,12 @@ const Dashboard = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={2.4}>
-          <Card elevation={2}>
+          <Card elevation={2} sx={{ background: 'linear-gradient(45deg, #e74c3c, #ec7063)', color: 'white' }}>
             <CardContent>
               <Box display="flex" alignItems="center">
-                <WarningIcon color="error" sx={{ fontSize: 40, mr: 2 }} />
+                <WarningIcon sx={{ fontSize: 40, mr: 2 }} />
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography gutterBottom>
                     High Risk
                   </Typography>
                   <Typography variant="h4" component="div">
@@ -228,12 +321,12 @@ const Dashboard = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={2.4}>
-          <Card elevation={2}>
+          <Card elevation={2} sx={{ background: 'linear-gradient(45deg, #3498db, #5faee3)', color: 'white' }}>
             <CardContent>
               <Box display="flex" alignItems="center">
-                <FinanceIcon color="info" sx={{ fontSize: 40, mr: 2 }} />
+                <FinanceIcon sx={{ fontSize: 40, mr: 2 }} />
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography gutterBottom>
                     Profit
                   </Typography>
                   <Typography variant="h4" component="div">
@@ -246,43 +339,67 @@ const Dashboard = () => {
         </Grid>
       </Grid>
 
-      {/* Charts and Graphs */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} md={6}>
-          <Paper elevation={2} sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom align="center">
-              Projects by Directorate
-            </Typography>
-            <CustomBarChart
-              data={directorateStats}
-              title="Projects by Directorate"
-              xAxisKey="name"
-              barKey="value"
-              color="#3498db"
-            />
+          <Paper elevation={3} sx={{ p: 2, background: 'linear-gradient(45deg, #2c3e50, #3498db)' }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6" color="white">
+                Projects by Directorate
+              </Typography>
+              <Button 
+                variant="contained" 
+                size="small"
+                onClick={() => exportChartAsImage('directorateChart', 'directorate-data')}
+                startIcon={<ImageIcon />}
+                sx={{ background: 'rgba(255,255,255,0.2)', '&:hover': { background: 'rgba(255,255,255,0.3)' } }}
+              >
+                Export
+              </Button>
+            </Box>
+            <div id="directorateChart">
+              <CustomBarChart
+                data={directorateStats}
+                title=""
+                xAxisKey="name"
+                barKey={['value']}
+                color={['#ffffff']}
+              />
+            </div>
           </Paper>
         </Grid>
         <Grid item xs={12} md={6}>
-          <Paper elevation={2} sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom align="center">
-              Financial Performance by Directorate
-            </Typography>
-            <CustomBarChart
-              data={directorateStats.map(dir => ({
-                name: dir.name,
-                Revenue: dir.revenue,
-                Expenditure: dir.expenditure
-              }))}
-              title="Revenue vs Expenditure"
-              xAxisKey="name"
-              barKey={['Revenue', 'Expenditure']}
-              color={['#27ae60', '#e74c3c']}
-            />
+          <Paper elevation={3} sx={{ p: 2, background: 'linear-gradient(45deg, #27ae60, #2ecc71)' }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6" color="white">
+                Financial Performance
+              </Typography>
+              <Button 
+                variant="contained" 
+                size="small"
+                onClick={() => exportChartAsImage('financialChart', 'financial-data')}
+                startIcon={<ImageIcon />}
+                sx={{ background: 'rgba(255,255,255,0.2)', '&:hover': { background: 'rgba(255,255,255,0.3)' } }}
+              >
+                Export
+              </Button>
+            </Box>
+            <div id="financialChart">
+              <CustomBarChart
+                data={directorateStats.map(dir => ({
+                  name: dir.name,
+                  Revenue: dir.revenue,
+                  Expenditure: dir.expenditure
+                }))}
+                title=""
+                xAxisKey="name"
+                barKey={['Revenue', 'Expenditure']}
+                color={['#ffffff', '#f1c40f']}
+              />
+            </div>
           </Paper>
         </Grid>
       </Grid>
 
-      {/* Recent Projects and High Risk Projects */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
           <Paper elevation={2} sx={{ p: 2 }}>
@@ -304,27 +421,41 @@ const Dashboard = () => {
                       mb: 1, 
                       border: '1px solid',
                       borderColor: 'grey.200',
-                      borderRadius: 1
+                      borderRadius: 1,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
                     }}
                   >
-                    <Typography variant="subtitle1" gutterBottom>
-                      {project.name || 'Unnamed Project'}
-                    </Typography>
-                    <Box display="flex" justifyContent="space-between">
-                      <Typography variant="body2" color="textSecondary">
-                        Directorate: {project.directorate || 'Not specified'}
+                    <Box>
+                      <Typography variant="subtitle1" gutterBottom>
+                        {project.name || 'Unnamed Project'}
                       </Typography>
-                      <Typography 
-                        variant="body2" 
-                        color={
-                          project.status === 'Completed' ? 'success.main' :
-                          project.status === 'In Progress' ? 'warning.main' :
-                          project.status === 'Planning' ? 'info.main' : 'textSecondary'
-                        }
-                      >
-                        {project.status || 'Unknown Status'}
-                      </Typography>
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography variant="body2" color="textSecondary">
+                          Directorate: {project.directorate || 'Not specified'}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          color={
+                            project.status === 'Completed' ? 'success.main' :
+                            project.status === 'In Progress' ? 'warning.main' :
+                            project.status === 'Planning' ? 'info.main' : 'textSecondary'
+                          }
+                          sx={{ ml: 2 }}
+                        >
+                          {project.status || 'Unknown Status'}
+                        </Typography>
+                      </Box>
                     </Box>
+                    <Button 
+                      variant="outlined" 
+                      color="error" 
+                      size="small"
+                      onClick={() => handleDeleteProject(project.id)}
+                    >
+                      Delete
+                    </Button>
                   </Box>
                 ))}
               </Box>
@@ -368,6 +499,9 @@ const Dashboard = () => {
                         {project.name || 'Unnamed Project'}
                       </Typography>
                       <Typography variant="body2" color="textSecondary">
+                        Directorate: {project.directorate}
+                      </Typography>
+                      <Typography variant="body2">
                         Risks: {riskFactors.join(', ')}
                       </Typography>
                     </Box>
@@ -379,12 +513,21 @@ const Dashboard = () => {
         </Grid>
       </Grid>
 
-      {/* Directorate Performance Table */}
       <Paper elevation={2} sx={{ p: 2, mt: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Directorate Performance Summary
-        </Typography>
-        <TableContainer>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h6">
+            Directorate Performance Summary
+          </Typography>
+          <Button 
+            variant="outlined" 
+            size="small"
+            onClick={() => exportChartAsImage('performanceTable', 'performance-data')}
+            startIcon={<ImageIcon />}
+          >
+            Export
+          </Button>
+        </Box>
+        <TableContainer id="performanceTable">
           <Table>
             <TableHead>
               <TableRow>
@@ -430,6 +573,19 @@ const Dashboard = () => {
           </Table>
         </TableContainer>
       </Paper>
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to delete this project? This action cannot be undone.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={confirmDelete} color="error" autoFocus>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
