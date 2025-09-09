@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -31,48 +31,7 @@ const AIInsights = () => {
   const [loading, setLoading] = useState(false);
   const [insights, setInsights] = useState([]);
 
-  useEffect(() => {
-    generateInsights();
-  }, [filters]);
-
-  const handleFilterChange = (field, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const generateInsights = async () => {
-    setLoading(true);
-    
-    // Simulate AI processing delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const filteredProjects = projects.filter(project => {
-      if (filters.directorate !== 'All' && project.directorate !== filters.directorate) return false;
-      if (filters.project !== 'All' && project.id !== filters.project) return false;
-      return true;
-    });
-
-    const generatedInsights = filteredProjects.map(project => {
-      const kpis = calculateProjectKPIs(project);
-      const riskLevels = calculateRiskLevels(project, kpis);
-      const recommendations = getAIRecommendations(project, riskLevels);
-      
-      return {
-        project,
-        kpis,
-        riskLevels,
-        recommendations,
-        riskScore: calculateRiskScore(riskLevels)
-      };
-    }).sort((a, b) => b.riskScore - a.riskScore);
-
-    setInsights(generatedInsights);
-    setLoading(false);
-  };
-
-  const calculateRiskScore = (riskLevels) => {
+  const calculateRiskScore = useCallback((riskLevels) => {
     let score = 0;
     if (riskLevels.lagRisk === 'High') score += 3;
     if (riskLevels.lagRisk === 'Danger') score += 5;
@@ -85,9 +44,9 @@ const AIInsights = () => {
     if (riskLevels.receivableRisk === 'High') score += 2;
     if (riskLevels.receivableRisk === 'Danger') score += 4;
     return score;
-  };
+  }, []);
 
-  const getAIRecommendations = (project, riskLevels) => {
+  const getAIRecommendations = useCallback((project, riskLevels) => {
     const recommendations = [];
 
     // Lag recommendations
@@ -160,6 +119,47 @@ const AIInsights = () => {
     }
 
     return recommendations;
+  }, [formatCurrency]);
+
+  const generateInsights = useCallback(async () => {
+    setLoading(true);
+    
+    // Simulate AI processing delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const filteredProjects = projects.filter(project => {
+      if (filters.directorate !== 'All' && project.directorate !== filters.directorate) return false;
+      if (filters.project !== 'All' && project.id !== filters.project) return false;
+      return true;
+    });
+
+    const generatedInsights = filteredProjects.map(project => {
+      const kpis = calculateProjectKPIs(project);
+      const riskLevels = calculateRiskLevels(project, kpis);
+      const recommendations = getAIRecommendations(project, riskLevels);
+      
+      return {
+        project,
+        kpis,
+        riskLevels,
+        recommendations,
+        riskScore: calculateRiskScore(riskLevels)
+      };
+    }).sort((a, b) => b.riskScore - a.riskScore);
+
+    setInsights(generatedInsights);
+    setLoading(false);
+  }, [projects, calculateProjectKPIs, calculateRiskLevels, filters, getAIRecommendations, calculateRiskScore]);
+
+  useEffect(() => {
+    generateInsights();
+  }, [filters, generateInsights]);
+
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const getPriorityColor = (priority) => {
@@ -281,7 +281,7 @@ const AIInsights = () => {
                       />
                       <Chip
                         label={`Profit: ${insight.riskLevels.profitability.toFixed(2)}%`}
-                        size="small"
+                        size="small'
                         color={
                           insight.riskLevels.profitabilityRisk === 'Excellent' ? 'success' :
                           insight.riskLevels.profitabilityRisk === 'Satisfactory' ? 'warning' : 'error'
