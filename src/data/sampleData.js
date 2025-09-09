@@ -632,4 +632,71 @@ export const sampleProjects = [
   {
     id: 'PROJ-010',
     name: 'Sialkot International Airport Expansion',
-    directorate
+    directorate: 'North',
+    category: 'Infrastructure',
+    location: 'Sialkot',
+    scope: 'Airport terminal expansion and runway extension',
+    client: 'Sialkot International Airport Limited',
+    consultant: 'Aviation Infrastructure Consultants',
+    caValue: 2200000000,
+    revisedCaValue: 2400000000,
+    startDate: '2023-03-01',
+    completionDate: '2024-09-01',
+    revisedCompletionDate: '2024-11-01',
+    status: 'In Progress',
+    createdAt: '2022-12-20T11:15:00Z',
+    updatedAt: '2023-10-05T14:30:00Z',
+    plannedProfitability: 15,
+    targets: [
+      { month: '2023-06', value: 150000000 },
+      { month: '2023-07', value: 170000000 },
+      { month: '2023-08', value: 190000000 },
+      { month: '2023-09', value: 210000000 }
+    ],
+    progress: [
+      {
+        date: '2023-10-01T00:00:00Z',
+        previousMonth: {
+          actualWorkDone: 900000000,
+          escalationPercentage: 6,
+          vettedRevenue: 850000000,
+          amountReceived: 820000000
+        },
+        currentMonth: {
+          workDone: 210000000,
+          escalationPercentage: 6,
+          vettedRevenue: 200000000,
+          amountReceived: 190000000
+        },
+        calculations: {
+          escalationDuringMonth: 12600000,
+          uptoDateActualWorkDone: 1110000000,
+          uptoDateEscalation: 66600000,
+          uptoDateActualRevenue: 1176600000,
+          uptoDateVettedRevenue: 1050000000,
+          uptoDateAmountReceived: 1010000000,
+          uptoDateSlippage: 126600000,
+          uptoDateReceivable: 40000000
+        },
+        expenditures: {
+          'Subcontractor Cost': 600000000,
+          'Material Cost': 280000000,
+          'Hiring Cost': 50000000,
+          'Engineer Facilities': 35000000,
+          'Pays & Allowances': 45000000,
+          'General Administration': 20000000,
+          'Other Costs': 10000000
+        }
+      }
+    ],
+    budget: {
+      tentativeEscalation: 7,
+      subcontractorCost: 1100000000,
+      materialCost: 700000000,
+      engineerFacilityCost: 90000000,
+      hrCost: 140000000,
+      generalAdmCost: 80000000,
+      overheadCalculationMethod: 'detailed'
+    }
+  }
+];
