@@ -11,29 +11,35 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Chip
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
   Assignment as AssignmentIcon,
   Schedule as ScheduleIcon,
   CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  AccountBalance as FinanceIcon
 } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
 import CustomBarChart from './BarChart';
 
 const Dashboard = () => {
-  const { projects, formatCurrency, calculateProjectKPIs } = useApp();
+  const { projects, formatCurrency, calculateProjectKPIs, calculateRiskLevels } = useApp();
   const [stats, setStats] = useState({
     total: 0,
     inProgress: 0,
     completed: 0,
     planning: 0,
-    highRisk: 0
+    highRisk: 0,
+    totalCAValue: 0,
+    totalRevenue: 0,
+    totalExpenditure: 0
   });
   const [loading, setLoading] = useState(true);
   const [recentProjects, setRecentProjects] = useState([]);
+  const [highRiskProjects, setHighRiskProjects] = useState([]);
   const [filter, setFilter] = useState('All');
 
   useEffect(() => {
@@ -44,20 +50,41 @@ const Dashboard = () => {
       const completed = projects.filter(p => p.status === 'Completed').length;
       const planning = projects.filter(p => p.status === 'Planning').length;
       
-      // Count high risk projects
-      const highRisk = projects.filter(project => {
+      // Calculate financial totals
+      const totalCAValue = projects.reduce((sum, p) => sum + (p.caValue || 0), 0);
+      
+      let totalRevenue = 0;
+      let totalExpenditure = 0;
+      let highRiskCount = 0;
+      const highRiskProjectsList = [];
+      
+      projects.forEach(project => {
         const kpis = calculateProjectKPIs(project);
-        return kpis.riskLevels && Object.values(kpis.riskLevels).some(level => 
-          level === 'High' || level === 'Danger'
-        );
-      }).length;
+        const riskLevels = calculateRiskLevels(project, kpis);
+        
+        totalRevenue += kpis.actualRevenue || 0;
+        totalExpenditure += riskLevels.totalExpenditure || 0;
+        
+        // Check if project is high risk
+        if (riskLevels.lagRisk === 'High' || riskLevels.lagRisk === 'Danger' ||
+            riskLevels.scopeCreepRisk === 'High' || riskLevels.scopeCreepRisk === 'Danger' ||
+            riskLevels.profitabilityRisk === 'Risk' || riskLevels.profitabilityRisk === 'Danger' ||
+            riskLevels.slippageRisk === 'High' || riskLevels.slippageRisk === 'Danger' ||
+            riskLevels.receivableRisk === 'High' || riskLevels.receivableRisk === 'Danger') {
+          highRiskCount++;
+          highRiskProjectsList.push({ project, riskLevels });
+        }
+      });
 
       setStats({
         total,
         inProgress,
         completed,
         planning,
-        highRisk
+        highRisk: highRiskCount,
+        totalCAValue,
+        totalRevenue,
+        totalExpenditure
       });
 
       // Get recent projects (last 5)
@@ -66,9 +93,10 @@ const Dashboard = () => {
         .slice(0, 5);
 
       setRecentProjects(sortedProjects);
+      setHighRiskProjects(highRiskProjectsList);
       setLoading(false);
     }
-  }, [projects, calculateProjectKPIs]);
+  }, [projects, calculateProjectKPIs, calculateRiskLevels]);
 
   const filteredProjects = filter === 'All' 
     ? projects 
@@ -78,7 +106,16 @@ const Dashboard = () => {
     'North', 'Centre', 'KPK', 'Baluchistan', 'Sindh'
   ].map(dir => ({
     name: dir,
-    value: projects.filter(p => p.directorate === dir).length
+    value: projects.filter(p => p.directorate === dir).length,
+    revenue: projects.filter(p => p.directorate === dir).reduce((sum, p) => {
+      const kpis = calculateProjectKPIs(p);
+      return sum + (kpis.actualRevenue || 0);
+    }, 0),
+    expenditure: projects.filter(p => p.directorate === dir).reduce((sum, p) => {
+      const kpis = calculateProjectKPIs(p);
+      const riskLevels = calculateRiskLevels(p, kpis);
+      return sum + (riskLevels.totalExpenditure || 0);
+    }, 0)
   }));
 
   if (loading) {
@@ -175,13 +212,13 @@ const Dashboard = () => {
           <Card elevation={2}>
             <CardContent>
               <Box display="flex" alignItems="center">
-                <TrendingUpIcon color="info" sx={{ fontSize: 40, mr: 2 }} />
+                <WarningIcon color="error" sx={{ fontSize: 40, mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
-                    Planning
+                    High Risk
                   </Typography>
                   <Typography variant="h4" component="div">
-                    {stats.planning}
+                    {stats.highRisk}
                   </Typography>
                 </Box>
               </Box>
@@ -193,13 +230,13 @@ const Dashboard = () => {
           <Card elevation={2}>
             <CardContent>
               <Box display="flex" alignItems="center">
-                <WarningIcon color="error" sx={{ fontSize: 40, mr: 2 }} />
+                <FinanceIcon color="info" sx={{ fontSize: 40, mr: 2 }} />
                 <Box>
                   <Typography color="textSecondary" gutterBottom>
-                    High Risk
+                    Profit
                   </Typography>
                   <Typography variant="h4" component="div">
-                    {stats.highRisk}
+                    {formatCurrency(stats.totalRevenue - stats.totalExpenditure)}
                   </Typography>
                 </Box>
               </Box>
@@ -227,18 +264,18 @@ const Dashboard = () => {
         <Grid item xs={12} md={6}>
           <Paper elevation={2} sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom align="center">
-              Status Distribution
+              Financial Performance by Directorate
             </Typography>
             <CustomBarChart
-              data={[
-                { name: 'Planning', value: stats.planning },
-                { name: 'In Progress', value: stats.inProgress },
-                { name: 'Completed', value: stats.completed }
-              ]}
-              title="Project Status Distribution"
+              data={directorateStats.map(dir => ({
+                name: dir.name,
+                Revenue: dir.revenue,
+                Expenditure: dir.expenditure
+              }))}
+              title="Revenue vs Expenditure"
               xAxisKey="name"
-              barKey="value"
-              color="#27ae60"
+              barKey={['Revenue', 'Expenditure']}
+              color={['#27ae60', '#e74c3c']}
             />
           </Paper>
         </Grid>
@@ -300,24 +337,20 @@ const Dashboard = () => {
               High Risk Projects
             </Typography>
             
-            {projects.filter(project => {
-              const kpis = calculateProjectKPIs(project);
-              return kpis.riskLevels && Object.values(kpis.riskLevels).some(level => 
-                level === 'High' || level === 'Danger'
-              );
-            }).length === 0 ? (
+            {highRiskProjects.length === 0 ? (
               <Alert severity="success">
                 No high risk projects found. All projects are performing well.
               </Alert>
             ) : (
               <Box>
-                {projects.filter(project => {
-                  const kpis = calculateProjectKPIs(project);
-                  return kpis.riskLevels && Object.values(kpis.riskLevels).some(level => 
-                    level === 'High' || level === 'Danger'
-                  );
-                }).slice(0, 5).map((project, index) => {
-                  const kpis = calculateProjectKPIs(project);
+                {highRiskProjects.slice(0, 5).map(({ project, riskLevels }, index) => {
+                  const riskFactors = [];
+                  if (riskLevels.lagRisk === 'High' || riskLevels.lagRisk === 'Danger') riskFactors.push('Lag');
+                  if (riskLevels.scopeCreepRisk === 'High' || riskLevels.scopeCreepRisk === 'Danger') riskFactors.push('Scope Creep');
+                  if (riskLevels.profitabilityRisk === 'Risk' || riskLevels.profitabilityRisk === 'Danger') riskFactors.push('Profitability');
+                  if (riskLevels.slippageRisk === 'High' || riskLevels.slippageRisk === 'Danger') riskFactors.push('Slippage');
+                  if (riskLevels.receivableRisk === 'High' || riskLevels.receivableRisk === 'Danger') riskFactors.push('Receivable');
+                  
                   return (
                     <Box 
                       key={project.id || index} 
@@ -334,10 +367,7 @@ const Dashboard = () => {
                         {project.name || 'Unnamed Project'}
                       </Typography>
                       <Typography variant="body2" color="textSecondary">
-                        Risks: {Object.entries(kpis.riskLevels || {})
-                          .filter(([_, level]) => level === 'High' || level === 'Danger')
-                          .map(([key]) => key)
-                          .join(', ')}
+                        Risks: {riskFactors.join(', ')}
                       </Typography>
                     </Box>
                   );
@@ -347,6 +377,58 @@ const Dashboard = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Directorate Performance Table */}
+      <Paper elevation={2} sx={{ p: 2, mt: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Directorate Performance Summary
+        </Typography>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Directorate</TableCell>
+                <TableCell align="right">Projects</TableCell>
+                <TableCell align="right">CA Value</TableCell>
+                <TableCell align="right">Revenue</TableCell>
+                <TableCell align="right">Expenditure</TableCell>
+                <TableCell align="right">Profit</TableCell>
+                <TableCell align="right">Profit Margin</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {directorateStats.map(dir => {
+                const profit = dir.revenue - dir.expenditure;
+                const profitMargin = dir.revenue > 0 ? (profit / dir.revenue) * 100 : 0;
+                
+                return (
+                  <TableRow key={dir.name}>
+                    <TableCell>{dir.name}</TableCell>
+                    <TableCell align="right">{dir.value}</TableCell>
+                    <TableCell align="right">{formatCurrency(dir.value * 1000000)}</TableCell>
+                    <TableCell align="right">{formatCurrency(dir.revenue)}</TableCell>
+                    <TableCell align="right">{formatCurrency(dir.expenditure)}</TableCell>
+                    <TableCell align="right">
+                      <Chip 
+                        label={formatCurrency(profit)} 
+                        color={profit >= 0 ? 'success' : 'error'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Chip 
+                        label={`${profitMargin.toFixed(2)}%`} 
+                        color={profitMargin >= 0 ? 'success' : 'error'}
+                        size="small"
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
     </Box>
   );
 };
