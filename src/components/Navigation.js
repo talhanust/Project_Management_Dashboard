@@ -123,10 +123,7 @@ const Navigation = () => {
           </IconButton>
         </Toolbar>
       </AppBar>
-      <Box
-        component="nav"
-        sx={{ width: { md: 240 }, flexShrink: { md: 0 } }}
-      >
+      <Box component="nav" sx={{ width: { md: 240 }, flexShrink: { md: 0 } }}>
         {isMobile ? (
           <Drawer
             variant="temporary"
