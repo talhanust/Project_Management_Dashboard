@@ -28,11 +28,11 @@ import {
   Warning as WarningIcon,
   AccountBalance as FinanceIcon
 } from '@mui/icons-material';
-import { useAppContext } from '../contexts/AppContext';
+import { useApp } from '../contexts/AppContext';
 import CustomBarChart from './BarChart';
 
 const Dashboard = () => {
-  const { projects, formatCurrency, calculateProjectKPIs, calculateRiskLevels } = useAppContext();
+  const { projects, formatCurrency, calculateProjectKPIs, calculateRiskLevels } = useApp();
   const [stats, setStats] = useState({
     total: 0,
     inProgress: 0,
@@ -150,9 +150,9 @@ const Dashboard = () => {
               <MenuItem value="All">All Directorates</MenuItem>
               <MenuItem value="North">North</MenuItem>
               <MenuItem value="Centre">Centre</MenuItem>
-              <MenuItem value="KPK">KPK</MenuItem>
-              <MenuItem value="Baluchistan">Baluchistan</MenuItem>
-              <MenuItem value="Sindh">Sindh</MenuItem>
+              <MenuItem value='KPK'>KPK</MenuItem>
+              <MenuItem value='Baluchistan'>Baluchistan</MenuItem>
+              <MenuItem value='Sindh'>Sindh</MenuItem>
             </Select>
           </FormControl>
         </Grid>
