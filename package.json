@@ -1,173 +1,101 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { appReducer, initialState } from './reducers';
-import { 
-  calculateProjectKPIs, 
-  calculateRiskLevels, 
-  calculateProgressPercentage, 
-  calculateStatistics 
-} from '../utils/calculations';
-import { formatCurrency, formatNumber, formatDate, formatPercentage, formatRiskLevel } from '../utils/formatters';
-import { loadState, saveState, loadSettings, saveSettings } from '../utils/storage';
-import { sampleProjects } from '../data/sampleData';
-
-// Create context
-const AppContext = createContext();
-
-// Custom hook to use the context
-export const useApp = () => {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
+{
+  "name": "project-management-dashboard",
+  "version": "1.0.0",
+  "description": "Advanced project management dashboard with AI insights, analytics, and comprehensive reporting",
+  "homepage": ".",
+  "private": true,
+  "dependencies": {
+    "@mui/material": "^5.14.0",
+    "@mui/icons-material": "^5.14.0",
+    "@mui/x-data-grid": "^6.11.0",
+    "@mui/x-date-pickers": "^6.11.0",
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.14.0",
+    "react-scripts": "5.0.1",
+    "recharts": "^2.7.0",
+    "date-fns": "^2.30.0",
+    "web-vitals": "^2.1.4",
+    "jspdf": "^2.5.1",
+    "html2canvas": "^1.4.1",
+    "docx": "^7.8.2",
+    "pptxgenjs": "^3.11.0",
+    "file-saver": "^2.0.5",
+    "axios": "^1.5.0",
+    "lodash": "^4.17.21",
+    "uuid": "^9.0.0",
+    "react-redux": "^8.1.1",
+    "redux": "^4.2.1",
+    "redux-thunk": "^2.4.2",
+    "redux-persist": "^6.0.0",
+    "reselect": "^4.1.7",
+    "immer": "^10.0.3"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "analyze": "npm run build && npx bundle-analyzer build/static/js/*.js",
+    "lint": "eslint src/**/*.{js,jsx}",
+    "lint:fix": "eslint src/**/*.{js,jsx} --fix",
+    "format": "prettier --write src/**/*.{js,jsx,css,md}",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ],
+    "rules": {
+      "no-unused-vars": "warn",
+      "react-hooks/exhaustive-deps": "warn"
+    }
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.195",
+    "@types/uuid": "^9.0.2",
+    "webpack-bundle-analyzer": "^4.9.0",
+    "eslint": "^8.45.0",
+    "eslint-plugin-react": "^7.32.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.0.0",
+    "gh-pages": "^5.0.0"
+  },
+  "keywords": [
+    "react",
+    "dashboard",
+    "project-management",
+    "analytics",
+    "reporting",
+    "ai-insights"
+  ],
+  "author": "Project Management Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/project-management-dashboard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/project-management-dashboard/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
   }
-  return context;
-};
-
-// Context provider
-export const AppProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(appReducer, initialState);
-
-  // Load state from localStorage on mount
-  useEffect(() => {
-    const savedState = loadState();
-    const savedSettings = loadSettings();
-    
-    if (savedState) {
-      dispatch({ type: 'SET_PROJECTS', payload: savedState.projects || [] });
-      if (savedState.currency) dispatch({ type: 'SET_CURRENCY', payload: savedState.currency });
-      if (savedState.filters) dispatch({ type: 'SET_FILTERS', payload: savedState.filters });
-      if (savedState.kpiThresholds) {
-        // Update thresholds if needed
-      }
-      if (savedState.darkMode !== undefined) dispatch({ type: 'SET_DARK_MODE', payload: savedState.darkMode });
-    } else {
-      // If no saved state exists, use sample data
-      dispatch({ type: 'SET_PROJECTS', payload: sampleProjects });
-    }
-    
-    if (savedSettings) {
-      if (savedSettings.currency) dispatch({ type: 'SET_CURRENCY', payload: savedSettings.currency });
-      if (savedSettings.darkMode !== undefined) dispatch({ type: 'SET_DARK_MODE', payload: savedSettings.darkMode });
-    }
-  }, []);
-
-  // Save state to localStorage whenever it changes
-  useEffect(() => {
-    saveState(state);
-  }, [state.projects, state.currency, state.filters, state.kpiThresholds, state.darkMode]);
-
-  // Context actions
-  const addProject = (project) => {
-    const projectWithId = {
-      ...project,
-      id: `PROJ-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    dispatch({ type: 'ADD_PROJECT', payload: projectWithId });
-    return projectWithId.id;
-  };
-
-  const updateProject = (project) => {
-    const updatedProject = {
-      ...project,
-      updatedAt: new Date().toISOString(),
-    };
-    dispatch({ type: 'UPDATE_PROJECT', payload: updatedProject });
-  };
-
-  const deleteProject = (projectId) => {
-    dispatch({ type: 'DELETE_PROJECT', payload: projectId });
-  };
-
-  const setSelectedProject = (project) => {
-    dispatch({ type: 'SET_SELECTED_PROJECT', payload: project });
-  };
-
-  const setDarkMode = (isDark) => {
-    dispatch({ type: 'SET_DARK_MODE', payload: isDark });
-    saveSettings({ ...loadSettings(), darkMode: isDark });
-  };
-
-  const setCurrency = (currency) => {
-    dispatch({ type: 'SET_CURRENCY', payload: currency });
-    saveSettings({ ...loadSettings(), currency });
-  };
-
-  const setFilters = (filters) => {
-    dispatch({ type: 'SET_FILTERS', payload: filters });
-  };
-
-  const addTarget = (projectId, target) => {
-    dispatch({ type: 'ADD_TARGET', payload: { projectId, target } });
-  };
-
-  const addProgress = (projectId, progress) => {
-    dispatch({ type: 'ADD_PROGRESS', payload: { projectId, progress } });
-  };
-
-  const addExpenditure = (projectId, expenditure) => {
-    dispatch({ type: 'ADD_EXPENDITURE', payload: { projectId, expenditure } });
-  };
-
-  const addBudget = (projectId, budget) => {
-    dispatch({ type: 'ADD_BUDGET', payload: { projectId, budget } });
-  };
-
-  const resetToSampleData = () => {
-    dispatch({ type: 'RESET_TO_SAMPLE_DATA', payload: sampleProjects });
-  };
-
-  // Get projects filtered by current filters
-  const getFilteredProjects = () => {
-    return state.projects.filter(project => {
-      if (state.filters.directorate !== 'All' && project.directorate !== state.filters.directorate) return false;
-      if (state.filters.status !== 'All' && project.status !== state.filters.status) return false;
-      
-      // Date range filtering
-      if (state.filters.dateRange.start && project.createdAt < state.filters.dateRange.start) return false;
-      if (state.filters.dateRange.end && project.createdAt > state.filters.dateRange.end) return false;
-      
-      return true;
-    });
-  };
-
-  // Context value
-  const value = {
-    ...state,
-    addProject,
-    updateProject,
-    deleteProject,
-    setSelectedProject,
-    setDarkMode,
-    setCurrency,
-    setFilters,
-    addTarget,
-    addProgress,
-    addExpenditure,
-    addBudget,
-    resetToSampleData,
-    formatCurrency: (value) => formatCurrency(value, state.currency),
-    formatNumber,
-    formatDate,
-    formatPercentage,
-    formatRiskLevel,
-    calculateProjectKPIs: (project) => calculateProjectKPIs(project),
-    calculateRiskLevels: (project, kpis) => calculateRiskLevels(project, kpis, state.kpiThresholds),
-    calculateProgressPercentage,
-    calculateStatistics: () => calculateStatistics(
-      state.projects, 
-      calculateProjectKPIs, 
-      (project, kpis) => calculateRiskLevels(project, kpis, state.kpiThresholds),
-      state.kpiThresholds
-    ),
-    getFilteredProjects
-  };
-
-  return (
-    <AppContext.Provider value={value}>
-      {children}
-    </AppContext.Provider>
-  );
-};
-
-export default AppContext;
+}
