@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>React Build Error Fix Guide</title>
+    <title>Netlify Build Error Fix</title>
     <style>
         * {
             box-sizing: border-box;
@@ -102,6 +102,14 @@
             border-radius: 4px;
         }
         
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
         .success {
             background: #d4edda;
             border-left: 4px solid #28a745;
@@ -150,27 +158,33 @@
 <body>
     <div class="container">
         <header>
-            <h1>React Build Error Fix Guide</h1>
-            <p class="subtitle">How to resolve "treating warnings as errors" in React builds</p>
+            <h1>Netlify Build Error Fix Guide</h1>
+            <p class="subtitle">Resolving "Treating warnings as errors" in React builds on Netlify</p>
         </header>
+        
+        <div class="error">
+            <strong>Build Error:</strong> Your Netlify build failed because Create React App treats warnings as errors in CI environments.
+        </div>
         
         <div class="content">
             <div class="card">
                 <h2>Problem Description</h2>
-                <p>When building React applications, you might encounter an error that says:</p>
+                <p>Your Netlify build log shows these errors:</p>
                 
                 <div class="code-block">
-                    <span class="code-comment">// Build error example</span><br>
+                    <span class="code-comment">// Build errors from your log:</span><br>
                     Treating warnings as errors because process.env.CI = true<br>
                     Most CI servers set it automatically.<br>
-                    Failed to compile.
+                    Failed to compile.<br><br>
+                    <span class="code-comment">// ESLint warnings:</span><br>
+                    src/components/ProjectMonitoring.js<br>
+                    &nbsp;&nbsp;Line 24:3: 'Divider' is defined but never used<br>
+                    &nbsp;&nbsp;Line 26:35: 'AddIcon' is defined but never used<br>
+                    &nbsp;&nbsp;Line 41:21: 'updateProject' is assigned a value but never used<br>
+                    &nbsp;&nbsp;... and more
                 </div>
                 
-                <p>This happens because Create React App treats warnings as errors in production builds, which can cause your build to fail even if there are only warnings.</p>
-                
-                <div class="warning">
-                    <strong>Note:</strong> This is a temporary solution. You should eventually fix all warnings in your code for production applications.
-                </div>
+                <p>This happens because Create React App treats warnings as errors in CI environments, which causes your build to fail.</p>
             </div>
             
             <div class="card">
@@ -229,15 +243,30 @@
             <div class="step">
                 <div class="step-number">5</div>
                 <div class="step-content">
-                    <p>Save the file and run your build command again</p>
-                    <div class="code-block">npm run build</div>
+                    <p>Save the file, commit, and push to your repository</p>
+                    <div class="code-block">
+                        git add package.json<br>
+                        git commit -m "fix: add CI=false to build script"<br>
+                        git push origin main
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <p>Netlify will automatically trigger a new build with the updated configuration</p>
                 </div>
             </div>
         </div>
         
+        <div class="warning">
+            <strong>Important:</strong> This is a temporary solution. You should eventually fix all warnings in your code for production applications. The warnings shown in your build log indicate unused variables and imports that should be cleaned up.
+        </div>
+        
         <footer>
-            <p>This is a temporary solution. Always aim to fix warnings in your React application for production use.</p>
-            <p>© 2023 React Build Fix Guide</p>
+            <p>This solution addresses the immediate build failure. For a production application, always aim to fix warnings rather than ignore them.</p>
+            <p>© 2023 Netlify Build Fix Guide</p>
         </footer>
     </div>
 
