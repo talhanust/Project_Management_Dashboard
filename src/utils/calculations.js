@@ -1,133 +1,147 @@
-// Utility functions for project calculations
+// KPI and financial calculations
 
-export const calculateKpisForProject = (project) => {
-  if (!project.targets || project.targets.length === 0) {
-    return { lagPercent: 0, riskLevel: 'No data' };
-  }
-
-  const totalPlanned = project.targets.reduce(
-    (sum, target) => sum + (target.plannedAmount || 0),
-    0
-  );
-  const totalActual = project.progress
-    ? project.progress.reduce((sum, prog) => sum + (prog.workDone || 0), 0)
-    : 0;
-
-  const lagAmount = totalPlanned - totalActual;
-  const lagPercent = totalPlanned > 0 ? (lagAmount / totalPlanned) * 100 : 0;
-
-  // Determine risk level
-  let riskLevel = 'Low';
-  if (lagPercent <= 5) {
-    riskLevel = 'Low';
-  } else if (lagPercent <= 10) {
-    riskLevel = 'Moderate';
-  } else if (lagPercent <= 15) {
-    riskLevel = 'High';
-  } else {
-    riskLevel = 'Danger';
-  }
-
-  return { lagPercent, riskLevel };
-};
-
-export const calculateFinancialsForProject = (project) => {
-  if (!project.progress || project.progress.length === 0) {
-    return {};
-  }
-
-  const totalActualRevenue = project.progress.reduce(
-    (sum, prog) => sum + (prog.workDone || 0),
-    0
-  );
-  const totalVettedRevenue = project.progress.reduce(
-    (sum, prog) => sum + (prog.vettedRevenue || 0),
-    0
-  );
-  const totalReceived = project.progress.reduce(
-    (sum, prog) => sum + (prog.amountReceived || 0),
-    0
-  );
-  const totalExpenditure = project.expenditures
-    ? project.expenditures.reduce((sum, exp) => sum + (exp.amount || 0), 0)
-    : 0;
-
-  const slippage = totalActualRevenue - totalVettedRevenue;
-  const receivable = totalVettedRevenue - totalReceived;
-  const costVariance = totalActualRevenue - totalExpenditure;
-  const profitability =
-    totalExpenditure > 0
-      ? ((totalActualRevenue - totalExpenditure) / totalExpenditure) * 100
-      : 0;
-
-  const scopeCreep = project.revisedCaValue - project.caValue || 0;
-  const scopeCreepPercent =
-    project.caValue > 0 ? (scopeCreep / project.caValue) * 100 : 0;
-
+export const calculateProjectKPIs = (project) => {
+  const latestProgress = project.progress && project.progress.length > 0 
+    ? project.progress[project.progress.length - 1] 
+    : null;
+  
+  const actualRevenue = latestProgress ? latestProgress.calculations?.uptoDateActualRevenue || 0 : 0;
+  const vettedRevenue = latestProgress ? latestProgress.calculations?.uptoDateVettedRevenue || 0 : 0;
+  const amountReceived = latestProgress ? latestProgress.calculations?.uptoDateAmountReceived || 0 : 0;
+  const slippage = latestProgress ? latestProgress.calculations?.uptoDateSlippage || 0 : 0;
+  const receivable = latestProgress ? latestProgress.calculations?.uptoDateReceivable || 0 : 0;
+  const expenditures = latestProgress ? latestProgress.expenditures || {} : {};
+  
   return {
-    totalActualRevenue,
-    totalVettedRevenue,
-    totalReceived,
-    totalExpenditure,
+    actualRevenue,
+    vettedRevenue,
+    amountReceived,
     slippage,
     receivable,
-    costVariance,
-    profitability,
-    scopeCreep,
-    scopeCreepPercent,
+    expenditures
   };
 };
 
-export const generateScurveData = (targets) => {
-  if (!targets || targets.length === 0) {
-    return [];
-  }
-
-  return targets.map((target, index) => {
-    const cumulative = targets
-      .slice(0, index + 1)
-      .reduce((sum, t) => sum + (t.plannedAmount || 0), 0);
-
-    return {
-      month: target.month,
-      planned: target.plannedAmount || 0,
-      cumulative,
-    };
-  });
+export const calculateRiskLevels = (project, kpis, thresholds) => {
+  // Calculate planned revenue from targets
+  const plannedRevenue = project.targets ? 
+    project.targets.reduce((sum, target) => sum + (target.value || 0), 0) : 0;
+  
+  // Calculate lag
+  const lag = plannedRevenue - (kpis.actualRevenue || 0);
+  const lagPercentage = plannedRevenue > 0 ? (lag / plannedRevenue) * 100 : 0;
+  
+  // Calculate scope creep
+  const scopeCreep = (project.revisedCaValue || 0) - (project.caValue || 0);
+  const scopeCreepPercentage = project.caValue > 0 ? (scopeCreep / project.caValue) * 100 : 0;
+  
+  // Calculate total expenditure
+  const totalExpenditure = Object.values(kpis.expenditures || {}).reduce((sum, val) => sum + (val || 0), 0);
+  
+  // Calculate cost variance
+  const costVariance = (kpis.actualRevenue || 0) - totalExpenditure;
+  
+  // Calculate profitability
+  const profitability = totalExpenditure > 0 ? ((kpis.actualRevenue || 0) - totalExpenditure) / totalExpenditure * 100 : 0;
+  
+  // Calculate slippage percentage
+  const slippagePercentage = kpis.actualRevenue > 0 ? (kpis.slippage / kpis.actualRevenue) * 100 : 0;
+  
+  // Calculate receivable percentage
+  const receivablePercentage = kpis.amountReceived > 0 ? (kpis.receivable / kpis.amountReceived) * 100 : 0;
+  
+  // Determine risk levels based on thresholds
+  const lagRisk = lagPercentage <= thresholds.lag.low ? 'Low' :
+                  lagPercentage <= thresholds.lag.moderate ? 'Moderate' :
+                  lagPercentage <= thresholds.lag.high ? 'High' : 'Danger';
+  
+  const scopeCreepRisk = scopeCreepPercentage <= thresholds.scopeCreep.low ? 'Low' :
+                         scopeCreepPercentage <= thresholds.scopeCreep.moderate ? 'Moderate' :
+                         scopeCreepPercentage <= thresholds.scopeCreep.high ? 'High' : 'Danger';
+  
+  const costVarianceRisk = costVariance >= 0 ? 'Under Budget' : 'Over Budget';
+  
+  const profitabilityRisk = profitability >= (project.plannedProfitability || 0) ? 'Excellent' :
+                            profitability >= (project.plannedProfitability || 0) * 0.92 ? 'Satisfactory' :
+                            profitability >= (project.plannedProfitability || 0) * 0.85 ? 'Risk' : 'Danger';
+  
+  const slippageRisk = slippagePercentage <= thresholds.slippage.low ? 'Satisfactory' :
+                       slippagePercentage <= thresholds.slippage.moderate ? 'Low' :
+                       slippagePercentage <= thresholds.slippage.high ? 'High' : 'Danger';
+  
+  const receivableRisk = receivablePercentage <= thresholds.receivable.low ? 'Satisfactory' :
+                         receivablePercentage <= thresholds.receivable.moderate ? 'Low' :
+                         receivablePercentage <= thresholds.receivable.high ? 'High' : 'Danger';
+  
+  return {
+    lag,
+    lagPercentage,
+    lagRisk,
+    scopeCreep,
+    scopeCreepPercentage,
+    scopeCreepRisk,
+    costVariance,
+    costVarianceRisk,
+    profitability,
+    profitabilityRisk,
+    slippage: kpis.slippage || 0,
+    slippagePercentage,
+    slippageRisk,
+    receivable: kpis.receivable || 0,
+    receivablePercentage,
+    receivableRisk,
+    totalExpenditure,
+    plannedRevenue,
+    actualRevenue: kpis.actualRevenue || 0
+  };
 };
 
-export const calculateProjectHealth = (project) => {
-  const { lagPercent } = calculateKpisForProject(project); // removed unused riskLevel
-  const financials = calculateFinancialsForProject(project);
+export const calculateProgressPercentage = (project) => {
+  if (!project.caValue || project.caValue === 0) return 0;
+  
+  const kpis = calculateProjectKPIs(project);
+  return kpis.actualRevenue > 0 ? (kpis.actualRevenue / project.caValue) * 100 : 0;
+};
 
-  let healthScore = 100;
+export const calculateStatistics = (projects, calculateProjectKPIs, calculateRiskLevels, thresholds) => {
+  const total = projects.length;
+  const inProgress = projects.filter(p => p.status === 'In Progress').length;
+  const completed = projects.filter(p => p.status === 'Completed').length;
+  const planning = projects.filter(p => p.status === 'Planning').length;
+  
+  // Calculate financial totals
+  const totalCAValue = projects.reduce((sum, p) => sum + (p.caValue || 0), 0);
+  
+  let totalRevenue = 0;
+  let totalExpenditure = 0;
+  let highRiskCount = 0;
+  
+  projects.forEach(project => {
+    const kpis = calculateProjectKPIs(project);
+    const riskLevels = calculateRiskLevels(project, kpis, thresholds);
+    
+    totalRevenue += kpis.actualRevenue || 0;
+    totalExpenditure += riskLevels.totalExpenditure || 0;
+    
+    // Check if project is high risk
+    if (riskLevels.lagRisk === 'High' || riskLevels.lagRisk === 'Danger' ||
+        riskLevels.scopeCreepRisk === 'High' || riskLevels.scopeCreepRisk === 'Danger' ||
+        riskLevels.profitabilityRisk === 'Risk' || riskLevels.profitabilityRisk === 'Danger' ||
+        riskLevels.slippageRisk === 'High' || riskLevels.slippageRisk === 'Danger' ||
+        riskLevels.receivableRisk === 'High' || riskLevels.receivableRisk === 'Danger') {
+      highRiskCount++;
+    }
+  });
 
-  // Deduct points based on lag
-  healthScore -= Math.min(lagPercent * 2, 50);
-
-  // Deduct points based on cost variance (if negative)
-  if (financials.costVariance < 0) {
-    healthScore -= Math.min(
-      (Math.abs(financials.costVariance) / project.caValue) * 100,
-      25
-    );
-  }
-
-  // Deduct points based on slippage
-  if (financials.slippage > 0) {
-    healthScore -= Math.min(
-      (financials.slippage / project.caValue) * 100,
-      15
-    );
-  }
-
-  // Deduct points based on receivables
-  if (financials.receivable > 0) {
-    healthScore -= Math.min(
-      (financials.receivable / project.caValue) * 100,
-      10
-    );
-  }
-
-  return Math.max(0, Math.round(healthScore));
+  return {
+    total,
+    inProgress,
+    completed,
+    planning,
+    highRisk: highRiskCount,
+    totalCAValue,
+    totalRevenue,
+    totalExpenditure,
+    totalProfit: totalRevenue - totalExpenditure
+  };
 };
