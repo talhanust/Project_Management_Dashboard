@@ -85,7 +85,7 @@ export const generateScurveData = (targets) => {
 };
 
 export const calculateProjectHealth = (project) => {
-  const { lagPercent, riskLevel } = calculateKpisForProject(project);
+  const { lagPercent } = calculateKpisForProject(project);  // removed riskLevel
   const financials = calculateFinancialsForProject(project);
   
   let healthScore = 100;
@@ -110,3 +110,4 @@ export const calculateProjectHealth = (project) => {
   
   return Math.max(0, Math.round(healthScore));
 };
+
