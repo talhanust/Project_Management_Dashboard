@@ -20,7 +20,7 @@ import {
 } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
 import { calculateKpisForProject } from '../utils/calculations';
-import BarChart from '../Charts/BarChart';
+import BarChart from './Charts/BarChart';
 
 const Dashboard = () => {
   const { projects, filters, setFilters } = useApp();
