@@ -7,26 +7,34 @@ import {
   Typography,
   Paper,
   CircularProgress,
-  Alert
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
   Assignment as AssignmentIcon,
   Schedule as ScheduleIcon,
-  CheckCircle as CheckCircleIcon
+  CheckCircle as CheckCircleIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
+import CustomBarChart from './BarChart';
 
 const Dashboard = () => {
-  const { projects } = useApp();
+  const { projects, formatCurrency, calculateProjectKPIs } = useApp();
   const [stats, setStats] = useState({
     total: 0,
     inProgress: 0,
     completed: 0,
-    planning: 0
+    planning: 0,
+    highRisk: 0
   });
   const [loading, setLoading] = useState(true);
   const [recentProjects, setRecentProjects] = useState([]);
+  const [filter, setFilter] = useState('All');
 
   useEffect(() => {
     if (projects) {
@@ -35,12 +43,21 @@ const Dashboard = () => {
       const inProgress = projects.filter(p => p.status === 'In Progress').length;
       const completed = projects.filter(p => p.status === 'Completed').length;
       const planning = projects.filter(p => p.status === 'Planning').length;
+      
+      // Count high risk projects
+      const highRisk = projects.filter(project => {
+        const kpis = calculateProjectKPIs(project);
+        return kpis.riskLevels && Object.values(kpis.riskLevels).some(level => 
+          level === 'High' || level === 'Danger'
+        );
+      }).length;
 
       setStats({
         total,
         inProgress,
         completed,
-        planning
+        planning,
+        highRisk
       });
 
       // Get recent projects (last 5)
@@ -51,7 +68,18 @@ const Dashboard = () => {
       setRecentProjects(sortedProjects);
       setLoading(false);
     }
-  }, [projects]);
+  }, [projects, calculateProjectKPIs]);
+
+  const filteredProjects = filter === 'All' 
+    ? projects 
+    : projects.filter(project => project.directorate === filter);
+
+  const directorateStats = [
+    'North', 'Centre', 'KPK', 'Baluchistan', 'Sindh'
+  ].map(dir => ({
+    name: dir,
+    value: projects.filter(p => p.directorate === dir).length
+  }));
 
   if (loading) {
     return (
@@ -67,9 +95,29 @@ const Dashboard = () => {
         Dashboard
       </Typography>
 
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={12} md={3}>
+          <FormControl fullWidth>
+            <InputLabel>Filter by Directorate</InputLabel>
+            <Select
+              value={filter}
+              label="Filter by Directorate"
+              onChange={(e) => setFilter(e.target.value)}
+            >
+              <MenuItem value="All">All Directorates</MenuItem>
+              <MenuItem value="North">North</MenuItem>
+              <MenuItem value="Centre">Centre</MenuItem>
+              <MenuItem value="KPK">KPK</MenuItem>
+              <MenuItem value="Baluchistan">Baluchistan</MenuItem>
+              <MenuItem value="Sindh">Sindh</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+      </Grid>
+
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card elevation={2}>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -87,7 +135,7 @@ const Dashboard = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card elevation={2}>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -105,7 +153,7 @@ const Dashboard = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card elevation={2}>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -123,7 +171,7 @@ const Dashboard = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card elevation={2}>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -140,11 +188,65 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </Grid>
+
+        <Grid item xs={12} sm={6} md={2.4}>
+          <Card elevation={2}>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <WarningIcon color="error" sx={{ fontSize: 40, mr: 2 }} />
+                <Box>
+                  <Typography color="textSecondary" gutterBottom>
+                    High Risk
+                  </Typography>
+                  <Typography variant="h4" component="div">
+                    {stats.highRisk}
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
 
-      {/* Recent Projects */}
+      {/* Charts and Graphs */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={6}>
+          <Paper elevation={2} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom align="center">
+              Projects by Directorate
+            </Typography>
+            <CustomBarChart
+              data={directorateStats}
+              title="Projects by Directorate"
+              xAxisKey="name"
+              barKey="value"
+              color="#3498db"
+            />
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Paper elevation={2} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom align="center">
+              Status Distribution
+            </Typography>
+            <CustomBarChart
+              data={[
+                { name: 'Planning', value: stats.planning },
+                { name: 'In Progress', value: stats.inProgress },
+                { name: 'Completed', value: stats.completed }
+              ]}
+              title="Project Status Distribution"
+              xAxisKey="name"
+              barKey="value"
+              color="#27ae60"
+            />
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Recent Projects and High Risk Projects */}
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={6}>
           <Paper elevation={2} sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               Recent Projects
@@ -192,25 +294,56 @@ const Dashboard = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={6}>
           <Paper elevation={2} sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
-              Quick Actions
+              High Risk Projects
             </Typography>
-            <Box>
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                • Create a new project
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                • View project reports
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                • Monitor ongoing projects
-              </Typography>
-              <Typography variant="body2">
-                • Generate executive reports
-              </Typography>
-            </Box>
+            
+            {projects.filter(project => {
+              const kpis = calculateProjectKPIs(project);
+              return kpis.riskLevels && Object.values(kpis.riskLevels).some(level => 
+                level === 'High' || level === 'Danger'
+              );
+            }).length === 0 ? (
+              <Alert severity="success">
+                No high risk projects found. All projects are performing well.
+              </Alert>
+            ) : (
+              <Box>
+                {projects.filter(project => {
+                  const kpis = calculateProjectKPIs(project);
+                  return kpis.riskLevels && Object.values(kpis.riskLevels).some(level => 
+                    level === 'High' || level === 'Danger'
+                  );
+                }).slice(0, 5).map((project, index) => {
+                  const kpis = calculateProjectKPIs(project);
+                  return (
+                    <Box 
+                      key={project.id || index} 
+                      sx={{ 
+                        p: 2, 
+                        mb: 1, 
+                        border: '1px solid',
+                        borderColor: 'error.light',
+                        borderRadius: 1,
+                        backgroundColor: 'error.light'
+                      }}
+                    >
+                      <Typography variant="subtitle1" gutterBottom>
+                        {project.name || 'Unnamed Project'}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        Risks: {Object.entries(kpis.riskLevels || {})
+                          .filter(([_, level]) => level === 'High' || level === 'Danger')
+                          .map(([key]) => key)
+                          .join(', ')}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
           </Paper>
         </Grid>
       </Grid>
