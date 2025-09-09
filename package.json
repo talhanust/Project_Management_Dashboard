@@ -2,7 +2,7 @@
   "name": "project-management-dashboard",
   "version": "1.0.0",
   "description": "Advanced project management dashboard with AI insights, analytics, and comprehensive reporting",
-  "homepage": ".",
+  "homepage": "https://talhanust.github.io/Project_Management_Dashboard",
   "private": true,
   "dependencies": {
     "@mui/material": "^5.14.0",
