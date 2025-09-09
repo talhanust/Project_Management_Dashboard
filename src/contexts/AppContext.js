@@ -39,7 +39,8 @@ const appReducer = (state, action) => {
     case 'DELETE_PROJECT':
       return {
         ...state,
-        projects: state.projects.filter(project => project.id !== action.payload)
+        projects: state.projects.filter(project => project.id !== action.payload),
+        selectedProject: state.selectedProject?.id === action.payload ? null : state.selectedProject,
       };
     case 'SET_SELECTED_PROJECT':
       return { ...state, selectedProject: action.payload };
@@ -125,7 +126,12 @@ const loadState = () => {
 
 const saveState = (state) => {
   try {
-    const serializedState = JSON.stringify(state);
+    const serializedState = JSON.stringify({
+      projects: state.projects,
+      currency: state.currency,
+      filters: state.filters,
+      kpiThresholds: state.kpiThresholds
+    });
     localStorage.setItem('appState', serializedState);
   } catch (error) {
     console.error('Error saving state to localStorage:', error);
@@ -152,7 +158,7 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     const savedState = loadState();
     if (savedState) {
-      dispatch({ type: 'SET_PROJECTS', payload: savedState.projects || [] });
+      if (savedState.projects) dispatch({ type: 'SET_PROJECTS', payload: savedState.projects });
       if (savedState.currency) dispatch({ type: 'SET_CURRENCY', payload: savedState.currency });
       if (savedState.filters) dispatch({ type: 'SET_FILTERS', payload: savedState.filters });
     }
@@ -161,7 +167,7 @@ export const AppProvider = ({ children }) => {
   // Save state to localStorage whenever it changes
   useEffect(() => {
     saveState(state);
-  }, [state]);
+  }, [state.projects, state.currency, state.filters, state.kpiThresholds]);
 
   // Context actions
   const addProject = (project) => {
@@ -229,78 +235,165 @@ export const AppProvider = ({ children }) => {
   };
 
   const calculateProjectKPIs = (project) => {
-    // Implementation for KPI calculations
     const latestProgress = project.progress && project.progress.length > 0 
       ? project.progress[project.progress.length - 1] 
       : null;
     
-    const plannedTarget = project.targets ? project.targets.reduce((sum, target) => sum + target.value, 0) : 0;
-    const actualRevenue = latestProgress ? latestProgress.uptoDateActualRevenue : 0;
-    const lag = plannedTarget - actualRevenue;
-    
-    const scopeCreep = project.revisedCaValue - project.caValue;
-    
-    const totalExpenditure = latestProgress ? Object.values(latestProgress.expenditures || {}).reduce((sum, val) => sum + val, 0) : 0;
-    const costVariance = actualRevenue - totalExpenditure;
-    
-    const profitability = totalExpenditure > 0 ? ((actualRevenue - totalExpenditure) / totalExpenditure) * 100 : 0;
-    
-    const slippage = latestProgress ? latestProgress.uptoDateSlippage : 0;
-    const receivable = latestProgress ? latestProgress.uptoDateReceivable : 0;
+    const actualRevenue = latestProgress ? latestProgress.calculations?.uptoDateActualRevenue || 0 : 0;
+    const vettedRevenue = latestProgress ? latestProgress.calculations?.uptoDateVettedRevenue || 0 : 0;
+    const amountReceived = latestProgress ? latestProgress.calculations?.uptoDateAmountReceived || 0 : 0;
+    const slippage = latestProgress ? latestProgress.calculations?.uptoDateSlippage || 0 : 0;
+    const receivable = latestProgress ? latestProgress.calculations?.uptoDateReceivable || 0 : 0;
+    const expenditures = latestProgress ? latestProgress.expenditures || {} : {};
     
     return {
-      lag,
-      scopeCreep,
-      costVariance,
-      profitability,
+      actualRevenue,
+      vettedRevenue,
+      amountReceived,
       slippage,
       receivable,
-      riskLevels: calculateRiskLevels(project, {
-        lag,
-        scopeCreep,
-        slippage,
-        receivable,
-        profitability
-      })
+      expenditures
     };
   };
 
   const calculateRiskLevels = (project, kpis) => {
-    const { lag, scopeCreep, slippage, receivable, profitability } = kpis;
-    const thresholds = state.kpiThresholds;
+    // Calculate planned revenue from targets
+    const plannedRevenue = project.targets ? 
+      project.targets.reduce((sum, target) => sum + (target.value || 0), 0) : 0;
     
-    const lagPercentage = project.targets && project.targets.length > 0 
-      ? (lag / project.targets.reduce((sum, target) => sum + target.value, 0)) * 100 
-      : 0;
+    // Calculate lag
+    const lag = plannedRevenue - (kpis.actualRevenue || 0);
+    const lagPercentage = plannedRevenue > 0 ? (lag / plannedRevenue) * 100 : 0;
     
-    const scopeCreepPercentage = project.caValue > 0 
-      ? (scopeCreep / project.caValue) * 100 
-      : 0;
+    // Calculate scope creep
+    const scopeCreep = (project.revisedCaValue || 0) - (project.caValue || 0);
+    const scopeCreepPercentage = project.caValue > 0 ? (scopeCreep / project.caValue) * 100 : 0;
     
-    const slippagePercentage = kpis.actualRevenue > 0 
-      ? (slippage / kpis.actualRevenue) * 100 
-      : 0;
+    // Calculate total expenditure
+    const totalExpenditure = Object.values(kpis.expenditures || {}).reduce((sum, val) => sum + (val || 0), 0);
     
-    const receivablePercentage = latestProgress && latestProgress.uptoDateAmountReceived > 0 
-      ? (receivable / latestProgress.uptoDateAmountReceived) * 100 
-      : 0;
+    // Calculate cost variance
+    const costVariance = (kpis.actualRevenue || 0) - totalExpenditure;
+    
+    // Calculate profitability
+    const profitability = totalExpenditure > 0 ? ((kpis.actualRevenue || 0) - totalExpenditure) / totalExpenditure * 100 : 0;
+    
+    // Calculate slippage percentage
+    const slippagePercentage = kpis.actualRevenue > 0 ? ((kpis.slippage || 0) / kpis.actualRevenue) * 100 : 0;
+    
+    // Calculate receivable percentage
+    const receivablePercentage = kpis.amountReceived > 0 ? ((kpis.receivable || 0) / kpis.amountReceived) * 100 : 0;
+    
+    // Determine risk levels based on thresholds
+    const lagRisk = lagPercentage <= state.kpiThresholds.lag.low ? 'Low' :
+                    lagPercentage <= state.kpiThresholds.lag.moderate ? 'Moderate' :
+                    lagPercentage <= state.kpiThresholds.lag.high ? 'High' : 'Danger';
+    
+    const scopeCreepRisk = scopeCreepPercentage <= state.kpiThresholds.scopeCreep.low ? 'Low' :
+                           scopeCreepPercentage <= state.kpiThresholds.scopeCreep.moderate ? 'Moderate' :
+                           scopeCreepPercentage <= state.kpiThresholds.scopeCreep.high ? 'High' : 'Danger';
+    
+    const costVarianceRisk = costVariance >= 0 ? 'Under Budget' : 'Over Budget';
+    
+    const profitabilityRisk = profitability >= (project.plannedProfitability || 0) ? 'Excellent' :
+                              profitability >= (project.plannedProfitability || 0) * 0.92 ? 'Satisfactory' :
+                              profitability >= (project.plannedProfitability || 0) * 0.85 ? 'Risk' : 'Danger';
+    
+    const slippageRisk = slippagePercentage <= state.kpiThresholds.slippage.low ? 'Satisfactory' :
+                         slippagePercentage <= state.kpiThresholds.slippage.moderate ? 'Low' :
+                         slippagePercentage <= state.kpiThresholds.slippage.high ? 'High' : 'Danger';
+    
+    const receivableRisk = receivablePercentage <= state.kpiThresholds.receivable.low ? 'Satisfactory' :
+                           receivablePercentage <= state.kpiThresholds.receivable.moderate ? 'Low' :
+                           receivablePercentage <= state.kpiThresholds.receivable.high ? 'High' : 'Danger';
     
     return {
-      lag: lagPercentage <= thresholds.lag.low ? 'Low' : 
-           lagPercentage <= thresholds.lag.moderate ? 'Moderate' :
-           lagPercentage <= thresholds.lag.high ? 'High' : 'Danger',
-      scopeCreep: scopeCreepPercentage <= thresholds.scopeCreep.low ? 'Low' : 
-                  scopeCreepPercentage <= thresholds.scopeCreep.moderate ? 'Moderate' :
-                  scopeCreepPercentage <= thresholds.scopeCreep.high ? 'High' : 'Danger',
-      slippage: slippagePercentage <= thresholds.slippage.low ? 'Satisfactory' : 
-                slippagePercentage <= thresholds.slippage.moderate ? 'Low' :
-                slippagePercentage <= thresholds.slippage.high ? 'High' : 'Danger',
-      receivable: receivablePercentage <= thresholds.receivable.low ? 'Satisfactory' : 
-                  receivablePercentage <= thresholds.receivable.moderate ? 'Low' :
-                  receivablePercentage <= thresholds.receivable.high ? 'High' : 'Danger',
-      profitability: profitability >= project.plannedProfitability ? 'Excellent' : 
-                    profitability >= project.plannedProfitability * 0.92 ? 'Satisfactory' :
-                    profitability >= project.plannedProfitability * 0.95 ? 'Risk' : 'Danger'
+      lag,
+      lagPercentage,
+      lagRisk,
+      scopeCreep,
+      scopeCreepPercentage,
+      scopeCreepRisk,
+      costVariance,
+      costVarianceRisk,
+      profitability,
+      profitabilityRisk,
+      slippage: kpis.slippage || 0,
+      slippagePercentage,
+      slippageRisk,
+      receivable: kpis.receivable || 0,
+      receivablePercentage,
+      receivableRisk,
+      totalExpenditure,
+      plannedRevenue,
+      actualRevenue: kpis.actualRevenue || 0
+    };
+  };
+
+  // Calculate progress percentage for a project
+  const calculateProgressPercentage = (project) => {
+    if (!project.caValue || project.caValue === 0) return 0;
+    
+    const kpis = calculateProjectKPIs(project);
+    return kpis.actualRevenue > 0 ? (kpis.actualRevenue / project.caValue) * 100 : 0;
+  };
+
+  // Get projects filtered by current filters
+  const getFilteredProjects = () => {
+    return state.projects.filter(project => {
+      if (state.filters.directorate !== 'All' && project.directorate !== state.filters.directorate) return false;
+      if (state.filters.status !== 'All' && project.status !== state.filters.status) return false;
+      
+      // Date range filtering
+      if (state.filters.dateRange.start && project.createdAt < state.filters.dateRange.start) return false;
+      if (state.filters.dateRange.end && project.createdAt > state.filters.dateRange.end) return false;
+      
+      return true;
+    });
+  };
+
+  // Calculate overall statistics
+  const calculateStatistics = () => {
+    const projects = getFilteredProjects();
+    const total = projects.length;
+    const inProgress = projects.filter(p => p.status === 'In Progress').length;
+    const completed = projects.filter(p => p.status === 'Completed').length;
+    const planning = projects.filter(p => p.status === 'Planning').length;
+    
+    // Calculate financial totals
+    const totalCAValue = projects.reduce((sum, p) => sum + (p.caValue || 0), 0);
+    
+    let totalRevenue = 0;
+    let totalExpenditure = 0;
+    let highRiskCount = 0;
+    
+    projects.forEach(project => {
+      const kpis = calculateProjectKPIs(project);
+      const riskLevels = calculateRiskLevels(project, kpis);
+      
+      totalRevenue += kpis.actualRevenue || 0;
+      totalExpenditure += riskLevels.totalExpenditure || 0;
+      
+      // Check if project is high risk
+      if (riskLevels.lagRisk === 'High' || riskLevels.lagRisk === 'Danger' ||
+          riskLevels.scopeCreepRisk === 'High' || riskLevels.scopeCreepRisk === 'Danger' ||
+          riskLevels.profitabilityRisk === 'Risk' || riskLevels.profitabilityRisk === 'Danger' ||
+          riskLevels.slippageRisk === 'High' || riskLevels.slippageRisk === 'Danger' ||
+          riskLevels.receivableRisk === 'High' || riskLevels.receivableRisk === 'Danger') {
+        highRiskCount++;
+      }
+    });
+
+    return {
+      total,
+      inProgress,
+      completed,
+      planning,
+      highRisk: highRiskCount,
+      totalCAValue,
+      totalRevenue,
+      totalExpenditure,
+      totalProfit: totalRevenue - totalExpenditure
     };
   };
 
@@ -319,7 +412,11 @@ export const AppProvider = ({ children }) => {
     addExpenditure,
     addBudget,
     formatCurrency,
-    calculateProjectKPIs
+    calculateProjectKPIs,
+    calculateRiskLevels,
+    calculateProgressPercentage,
+    getFilteredProjects,
+    calculateStatistics
   };
 
   return (
