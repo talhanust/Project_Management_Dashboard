@@ -1,37 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AppBar,
   Toolbar,
   Typography,
-  Button,
   IconButton,
-  useTheme,
-  useMediaQuery,
   Drawer,
   List,
   ListItem,
+  ListItemIcon,
   ListItemText,
-  ListItemIcon
+  useTheme,
+  useMediaQuery,
+  Box,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
-  Brightness4 as DarkIcon,
-  Brightness7 as LightIcon,
   Dashboard as DashboardIcon,
   Assignment as PlanningIcon,
   TrendingUp as MonitoringIcon,
   Insights as InsightsIcon,
   Description as ReportsIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Brightness4 as DarkIcon,
+  Brightness7 as LightIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useApp } from '../contexts/AppContext';
 
-const Navigation = ({ darkMode, toggleTheme }) => {
+const Navigation = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { darkMode, setDarkMode } = useApp();
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
@@ -39,16 +41,27 @@ const Navigation = ({ darkMode, toggleTheme }) => {
     { text: 'Project Monitoring', icon: <MonitoringIcon />, path: '/monitoring' },
     { text: 'AI Insights', icon: <InsightsIcon />, path: '/insights' },
     { text: 'Executive Reports', icon: <ReportsIcon />, path: '/reports' },
-    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' }
+    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
+  const handleNavigation = (path) => {
+    navigate(path);
+    if (isMobile) {
+      setMobileOpen(false);
+    }
+  };
+
+  const toggleTheme = () => {
+    setDarkMode(!darkMode);
+  };
+
   const drawer = (
     <div>
-      <Toolbar>
+      <Toolbar sx={{ backgroundColor: theme.palette.primary.main, color: 'white' }}>
         <Typography variant="h6" noWrap component="div">
           Project Dashboard
         </Typography>
@@ -58,8 +71,20 @@ const Navigation = ({ darkMode, toggleTheme }) => {
           <ListItem
             button
             key={item.text}
-            onClick={() => navigate(item.path)}
+            onClick={() => handleNavigation(item.path)}
             selected={location.pathname === item.path}
+            sx={{
+              '&.Mui-selected': {
+                backgroundColor: theme.palette.primary.light,
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: theme.palette.primary.main,
+                },
+                '& .MuiListItemIcon-root': {
+                  color: 'white',
+                },
+              },
+            }}
           >
             <ListItemIcon>{item.icon}</ListItemIcon>
             <ListItemText primary={item.text} />
@@ -71,7 +96,13 @@ const Navigation = ({ darkMode, toggleTheme }) => {
 
   return (
     <>
-      <AppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
+      <AppBar
+        position="fixed"
+        sx={{
+          zIndex: theme.zIndex.drawer + 1,
+          backgroundColor: theme.palette.primary.main,
+        }}
+      >
         <Toolbar>
           {isMobile && (
             <IconButton
@@ -92,34 +123,36 @@ const Navigation = ({ darkMode, toggleTheme }) => {
           </IconButton>
         </Toolbar>
       </AppBar>
-      {isMobile ? (
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
-          sx={{
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
-          }}
-        >
-          {drawer}
-        </Drawer>
-      ) : (
-        <Drawer
-          variant="permanent"
-          sx={{
-            width: 240,
-            flexShrink: 0,
-            '& .MuiDrawer-paper': {
-              width: 240,
-              boxSizing: 'border-box',
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      )}
+      <Box
+        component="nav"
+        sx={{ width: { md: 240 }, flexShrink: { md: 0 } }}
+      >
+        {isMobile ? (
+          <Drawer
+            variant="temporary"
+            open={mobileOpen}
+            onClose={handleDrawerToggle}
+            ModalProps={{ keepMounted: true }}
+            sx={{
+              display: { xs: 'block', md: 'none' },
+              '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
+            }}
+          >
+            {drawer}
+          </Drawer>
+        ) : (
+          <Drawer
+            variant="permanent"
+            sx={{
+              display: { xs: 'none', md: 'block' },
+              '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
+            }}
+            open
+          >
+            {drawer}
+          </Drawer>
+        )}
+      </Box>
     </>
   );
 };
