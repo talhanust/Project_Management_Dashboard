@@ -26,6 +26,19 @@
   background: #a8a8a8;
 }
 
+/* Dark mode scrollbar */
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
 /* Animation for page transitions */
 .fade-enter {
   opacity: 0;
@@ -61,6 +74,10 @@
   .main-content {
     margin-top: 0;
   }
+  
+  .MuiDrawer-root {
+    display: none !important;
+  }
 }
 
 /* Custom classes for specific elements */
@@ -78,6 +95,27 @@
   padding: 15px;
   text-align: center;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Risk indicator classes */
+.risk-low {
+  color: #27ae60;
+  background-color: rgba(39, 174, 96, 0.1);
+}
+
+.risk-moderate {
+  color: #f39c12;
+  background-color: rgba(243, 156, 18, 0.1);
+}
+
+.risk-high {
+  color: #e74c3c;
+  background-color: rgba(231, 76, 60, 0.1);
+}
+
+.risk-danger {
+  color: #c0392b;
+  background-color: rgba(192, 57, 43, 0.1);
 }
 
 /* Custom button colors */
@@ -115,4 +153,116 @@
   height: 40px;
   animation: spin 1s linear infinite;
   margin: 20px auto;
+}
+
+/* Chart container enhancements */
+.chart-container {
+  position: relative;
+  margin: 20px 0;
+}
+
+.chart-title {
+  text-align: center;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+/* Table improvements */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.data-table td {
+  padding: 12px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.data-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Form enhancements */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+/* Responsive utilities */
+@media (max-width: 600px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+  
+  .stack-mobile {
+    flex-direction: column !important;
+  }
+}
+
+/* Export button styles */
+.export-btn-group {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.export-btn {
+  min-width: 150px;
+}
+
+/* KPI indicator styles */
+.kpi-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.kpi-positive {
+  background-color: rgba(39, 174, 96, 0.1);
+  color: #27ae60;
+}
+
+.kpi-warning {
+  background-color: rgba(243, 156, 18, 0.1);
+  color: #f39c12;
+}
+
+.kpi-negative {
+  background-color: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .project-card,
+[data-theme="dark"] .kpi-card {
+  background-color: #2a2a2a;
+}
+
+[data-theme="dark"] .data-table th {
+  background-color: #2a2a2a;
+  color: #fff;
+}
+
+[data-theme="dark"] .data-table td {
+  border-color: #444;
+}
+
+[data-theme="dark"] .data-table tr:hover {
+  background-color: #333;
 }
