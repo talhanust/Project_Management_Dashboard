@@ -780,91 +780,93 @@ const ProjectPlanning = () => {
             </Grid>
             
             <Grid item xs={12} md={6}>
-              {budgetData.projectId && (
-                <>
-                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                    <Typography variant="h6">
-                      Budget Summary
-                    </Typography>
-                    <Button 
-                      variant="outlined" 
-                      size="small"
-                      onClick={() => exportChartAsImage('budgetTable', 'budget-data')}
-                      startIcon={<ImageIcon />}
-                    >
-                      Export
-                    </Button>
-                  </Box>
-                  {(() => {
-                    const project = projects.find(p => p.id === budgetData.projectId);
-                    const budget = project?.budget;
-                    const totals = budget ? calculateBudgetTotals(budget, project) : null;
-                    
-                    return totals ? (
-                      <TableContainer component={Paper} id="budgetTable">
-                        <Table>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell><strong>Total Planned Revenue</strong></TableCell>
-                              <TableCell align="right">{formatCurrency(totals.totalPlannedRevenue)}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell><strong>Total Direct Cost</strong></TableCell>
-                              <TableCell align="right">{formatCurrency(totals.totalDirectCost)}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell><strong>Total Overhead Cost</strong></TableCell>
-                              <TableCell align="right">{formatCurrency(totals.totalOverheadCost)}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell><strong>Total Planned Cost</strong></TableCell>
-                              <TableCell align="right">{formatCurrency(totals.totalPlannedCost)}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell><strong>Planned Gross Profit</strong></TableCell>
-                              <TableCell align="right">{formatCurrency(totals.plannedGrossProfit)}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell><strong>Planned Net Profit</strong></TableCell>
-                              <TableCell align="right">{formatCurrency(totals.plannedNetProfit)}</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell><strong>Planned Profit Margin</strong></TableCell>
-                              <TableCell align="right">
-                                {totals.totalPlannedRevenue > 0 
-                                  ? `${((totals.plannedNetProfit / totals.totalPlannedRevenue) * 100).toFixed(2)}%` 
-                                  : '0%'}
-                              </TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
+              {budgetData.projectId && (() => {
+                const project = projects.find(p => p.id === budgetData.projectId);
+                const budget = project?.budget;
+                const totals = budget ? calculateBudgetTotals(budget, project) : null;
+                
+                return (
+                  <>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                      <Typography variant="h6">
+                        Budget Summary
+                      </Typography>
+                      <Button 
+                        variant="outlined" 
+                        size="small"
+                        onClick={() => exportChartAsImage('budgetTable', 'budget-data')}
+                        startIcon={<ImageIcon />}
+                      >
+                        Export
+                      </Button>
+                    </Box>
+                    {totals ? (
+                      <>
+                        <TableContainer component={Paper} id="budgetTable">
+                          <Table>
+                            <TableBody>
+                              <TableRow>
+                                <TableCell><strong>Total Planned Revenue</strong></TableCell>
+                                <TableCell align="right">{formatCurrency(totals.totalPlannedRevenue)}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell><strong>Total Direct Cost</strong></TableCell>
+                                <TableCell align="right">{formatCurrency(totals.totalDirectCost)}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell><strong>Total Overhead Cost</strong></TableCell>
+                                <TableCell align="right">{formatCurrency(totals.totalOverheadCost)}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell><strong>Total Planned Cost</strong></TableCell>
+                                <TableCell align="right">{formatCurrency(totals.totalPlannedCost)}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell><strong>Planned Gross Profit</strong></TableCell>
+                                <TableCell align="right">{formatCurrency(totals.plannedGrossProfit)}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell><strong>Planned Net Profit</strong></TableCell>
+                                <TableCell align="right">{formatCurrency(totals.plannedNetProfit)}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell><strong>Planned Profit Margin</strong></TableCell>
+                                <TableCell align="right">
+                                  {totals.totalPlannedRevenue > 0 
+                                    ? `${((totals.plannedNetProfit / totals.totalPlannedRevenue) * 100).toFixed(2)}%` 
+                                    : '0%'}
+                                </TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+
+                        {showFinancialGraphs && (
+                          <Box sx={{ mt: 3 }}>
+                            <Typography variant="h6" gutterBottom>
+                              Financial Overview
+                            </Typography>
+                            <CustomBarChart
+                              data={[
+                                { name: 'Revenue', value: totals.totalPlannedRevenue || 0 },
+                                { name: 'Direct Cost', value: totals.totalDirectCost || 0 },
+                                { name: 'Overhead', value: totals.totalOverheadCost || 0 },
+                                { name: 'Net Profit', value: totals.plannedNetProfit || 0 }
+                              ]}
+                              title="Budget Breakdown"
+                              xAxisKey="name"
+                              barKey={['value']}
+                              color={['#3498db']}
+                            />
+                          </Box>
+                        )}
+                      </>
                     ) : (
                       <Alert severity="info">No budget data available for this project.</Alert>
-                    );
-                  })()}
-
-                  {showFinancialGraphs && budgetData.projectId && (
-                    <Box sx={{ mt: 3 }}>
-                      <Typography variant="h6" gutterBottom>
-                        Financial Overview
-                      </Typography>
-                      <CustomBarChart
-                        data={[
-                          { name: 'Revenue', value: totals?.totalPlannedRevenue || 0 },
-                          { name: 'Direct Cost', value: totals?.totalDirectCost || 0 },
-                          { name: 'Overhead', value: totals?.totalOverheadCost || 0 },
-                          { name: 'Net Profit', value: totals?.plannedNetProfit || 0 }
-                        ]}
-                        title="Budget Breakdown"
-                        xAxisKey="name"
-                        barKey={['value']}
-                        color={['#3498db']}
-                      />
-                    </Box>
-                  )}
-                </>
-              )}
+                    )}
+                  </>
+                );
+              })()}
             </Grid>
           </Grid>
         </TabPanel>
