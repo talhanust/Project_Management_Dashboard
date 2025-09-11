@@ -37,7 +37,8 @@ import {
   PictureAsPdf as PdfIcon,
   Image as ImageIcon,
   TrendingUp as TrendingUpIcon,
-  ShowChart as ChartIcon
+  ShowChart as ChartIcon,
+  Target as TargetIcon
 } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
 import CustomBarChart from './BarChart';
@@ -66,7 +67,8 @@ const Dashboard = () => {
     totalActualRevenue: 0,
     totalVettedRevenue: 0,
     totalAmountReceived: 0,
-    totalExpenditure: 0
+    totalExpenditure: 0,
+    totalPlannedRevenue: 0
   });
   const [loading, setLoading] = useState(true);
   const [recentProjects, setRecentProjects] = useState([]);
@@ -82,11 +84,12 @@ const Dashboard = () => {
     vettedRevenue: 0,
     amountReceived: 0,
     netProfit: 0,
-    completionPercentage: 0
+    completionPercentage: 0,
+    plannedRevenue: 0
   });
 
   useEffect(() => {
-    if (projects) {
+    if (projects && projects.length > 0) {
       calculateStats();
     }
   }, [projects, filter, selectedProject]);
@@ -115,6 +118,7 @@ const Dashboard = () => {
     let totalVettedRevenue = 0;
     let totalAmountReceived = 0;
     let totalExpenditure = 0;
+    let totalPlannedRevenue = 0;
     let completionPercentage = 0;
     let highRiskCount = 0;
     const highRiskProjectsList = [];
@@ -126,13 +130,23 @@ const Dashboard = () => {
       totalActualRevenue += kpis.actualRevenue || 0;
       totalVettedRevenue += kpis.vettedRevenue || 0;
       totalAmountReceived += kpis.amountReceived || 0;
-      totalExpenditure += Object.values(kpis.expenditures || {}).reduce((sum, val) => sum + (val || 0), 0);
+      
+      // Calculate total expenditure
+      if (kpis.expenditures) {
+        totalExpenditure += Object.values(kpis.expenditures).reduce((sum, val) => sum + (val || 0), 0);
+      }
+      
+      // Calculate planned revenue from targets
+      if (project.targets) {
+        totalPlannedRevenue += project.targets.reduce((sum, target) => sum + (target.value || 0), 0);
+      }
       
       // Calculate completion percentage based on actual revenue vs CA value
       if (project.caValue > 0) {
         completionPercentage += (kpis.actualRevenue || 0) / project.caValue * 100;
       }
       
+      // Check if project is high risk
       if (riskLevels.overallRisk === 'High' || riskLevels.overallRisk === 'Danger') {
         highRiskCount++;
         highRiskProjectsList.push({ project, riskLevels });
@@ -154,7 +168,8 @@ const Dashboard = () => {
       totalActualRevenue,
       totalVettedRevenue,
       totalAmountReceived,
-      totalExpenditure
+      totalExpenditure,
+      totalPlannedRevenue
     });
 
     setMetrics({
@@ -163,7 +178,8 @@ const Dashboard = () => {
       vettedRevenue: totalVettedRevenue,
       amountReceived: totalAmountReceived,
       netProfit: totalActualRevenue - totalExpenditure,
-      completionPercentage
+      completionPercentage,
+      plannedRevenue: totalPlannedRevenue
     });
 
     const sortedProjects = [...filteredProjects]
@@ -192,33 +208,40 @@ const Dashboard = () => {
       const kpis = calculateProjectKPIs(p);
       return sum + (kpis.amountReceived || 0);
     }, 0),
+    plannedRevenue: projects.filter(p => p.directorate === dir).reduce((sum, p) => {
+      return sum + (p.targets ? p.targets.reduce((targetSum, target) => targetSum + (target.value || 0), 0) : 0);
+    }, 0),
     expenditure: projects.filter(p => p.directorate === dir).reduce((sum, p) => {
       const kpis = calculateProjectKPIs(p);
-      return sum + Object.values(kpis.expenditures || {}).reduce((expSum, val) => expSum + (val || 0), 0);
+      return sum + (kpis.expenditures ? Object.values(kpis.expenditures).reduce((expSum, val) => expSum + (val || 0), 0) : 0);
     }, 0)
   }));
 
   const exportChartAsImage = (chartId, filename) => {
     const chartElement = document.getElementById(chartId);
-    html2canvas(chartElement).then(canvas => {
-      const link = document.createElement('a');
-      link.download = `${filename}.png`;
-      link.href = canvas.toDataURL();
-      link.click();
-    });
+    if (chartElement) {
+      html2canvas(chartElement).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `${filename}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    }
   };
 
   const exportAsPDF = () => {
     const dashboardElement = document.getElementById('dashboard-content');
-    html2canvas(dashboardElement).then(canvas => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save('dashboard-report.pdf');
-    });
+    if (dashboardElement) {
+      html2canvas(dashboardElement).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save('dashboard-report.pdf');
+      });
+    }
   };
 
   const handleDeleteProject = (projectId) => {
@@ -242,17 +265,47 @@ const Dashboard = () => {
   const getProgressTrendData = () => {
     if (selectedProject !== 'All') {
       const project = projects.find(p => p.id === selectedProject);
-      if (project && project.progress) {
-        return project.progress.map((p, index) => ({
-          name: `Progress ${index + 1}`,
-          'Actual Work Done': p.calculations ? p.calculations.uptoDateActualWorkDone : 0,
-          'Vetted Revenue': p.calculations ? p.calculations.uptoDateVettedRevenue : 0
-        }));
+      if (project && project.progress && project.progress.length > 0) {
+        return project.progress.map((progress, index) => {
+          const calculations = progress.calculations || {};
+          return {
+            name: `Progress ${index + 1}`,
+            'Actual Work Done': calculations.uptoDateActualWorkDone || 0,
+            'Vetted Revenue': calculations.uptoDateVettedRevenue || 0
+          };
+        });
       }
     }
     
     // Return empty if no progress data
     return [];
+  };
+
+  // Get planned vs actual revenue data
+  const getPlannedVsActualData = () => {
+    let filteredProjects = projects;
+    
+    // Apply directorate filter
+    if (filter !== 'All') {
+      filteredProjects = filteredProjects.filter(p => p.directorate === filter);
+    }
+    
+    // Apply project filter
+    if (selectedProject !== 'All') {
+      filteredProjects = filteredProjects.filter(p => p.id === selectedProject);
+    }
+    
+    return filteredProjects.map(project => {
+      const kpis = calculateProjectKPIs(project);
+      const plannedRevenue = project.targets ? 
+        project.targets.reduce((sum, target) => sum + (target.value || 0), 0) : 0;
+      
+      return {
+        name: project.name,
+        'Planned Revenue': plannedRevenue,
+        'Actual Revenue': kpis.actualRevenue || 0
+      };
+    });
   };
 
   // Get expenditure breakdown data
@@ -308,6 +361,46 @@ const Dashboard = () => {
       { name: 'Vetted Revenue', value: metrics.vettedRevenue },
       { name: 'Amount Received', value: metrics.amountReceived }
     ];
+  };
+
+  // Get budget vs actual data
+  const getBudgetVsActualData = () => {
+    if (selectedProject !== 'All') {
+      const project = projects.find(p => p.id === selectedProject);
+      if (project && project.budget) {
+        const kpis = calculateProjectKPIs(project);
+        const plannedRevenue = project.targets ? 
+          project.targets.reduce((sum, target) => sum + (target.value || 0), 0) : 0;
+        
+        const totalExpenditure = kpis.expenditures ? 
+          Object.values(kpis.expenditures).reduce((sum, val) => sum + (val || 0), 0) : 0;
+        
+        // Calculate planned cost from budget
+        const budget = project.budget;
+        const plannedDirectCost = (budget.subcontractorCost || 0) + 
+                                 (budget.materialCost || 0) + 
+                                 (budget.engineerFacilityCost || 0);
+        
+        let plannedOverheadCost = 0;
+        if (budget.overheadCalculationMethod === 'percentage') {
+          plannedOverheadCost = (project.caValue || 0) * 0.1; // Default 10% for example
+        } else {
+          plannedOverheadCost = (budget.hrCost || 0) + (budget.generalAdmCost || 0);
+        }
+        
+        const plannedTotalCost = plannedDirectCost + plannedOverheadCost;
+        
+        return [
+          { name: 'Revenue', Planned: plannedRevenue, Actual: kpis.actualRevenue || 0 },
+          { name: 'Direct Cost', Planned: plannedDirectCost, Actual: totalExpenditure },
+          { name: 'Overhead', Planned: plannedOverheadCost, Actual: 0 }, // Actual overhead might not be tracked separately
+          { name: 'Total Cost', Planned: plannedTotalCost, Actual: totalExpenditure },
+          { name: 'Profit', Planned: plannedRevenue - plannedTotalCost, Actual: (kpis.actualRevenue || 0) - totalExpenditure }
+        ];
+      }
+    }
+    
+    return [];
   };
 
   if (loading) {
@@ -416,7 +509,20 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={2.4}>
           <Card elevation={3}>
             <CardContent sx={{ textAlign: 'center' }}>
-              <ChartIcon color="info" sx={{ fontSize: 40, mb: 1 }} />
+              <TargetIcon color="info" sx={{ fontSize: 40, mb: 1 }} />
+              <Typography variant="h6" gutterBottom>
+                Planned Revenue
+              </Typography>
+              <Typography variant="h5">
+                {formatCurrency(metrics.plannedRevenue)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <Card elevation={3}>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <ChartIcon color="warning" sx={{ fontSize: 40, mb: 1 }} />
               <Typography variant="h6" gutterBottom>
                 Amount Received
               </Typography>
@@ -429,31 +535,12 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={2.4}>
           <Card elevation={3}>
             <CardContent sx={{ textAlign: 'center' }}>
-              <FinanceIcon color="warning" sx={{ fontSize: 40, mb: 1 }} />
+              <FinanceIcon color={metrics.netProfit >= 0 ? 'success' : 'error'} sx={{ fontSize: 40, mb: 1 }} />
               <Typography variant="h6" gutterBottom>
                 Net Profit
               </Typography>
               <Typography variant="h5" color={metrics.netProfit >= 0 ? 'success.main' : 'error.main'}>
                 {formatCurrency(metrics.netProfit)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <Card elevation={3}>
-            <CardContent sx={{ textAlign: 'center' }}>
-              <CircularProgress 
-                variant="determinate" 
-                value={metrics.completionPercentage} 
-                size={40}
-                thickness={4}
-                sx={{ mb: 1 }}
-              />
-              <Typography variant="h6" gutterBottom>
-                Completion
-              </Typography>
-              <Typography variant="h5">
-                {metrics.completionPercentage.toFixed(1)}%
               </Typography>
             </CardContent>
           </Card>
@@ -465,6 +552,7 @@ const Dashboard = () => {
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="project monitoring tabs">
           <Tab label="Progress Tracking" />
           <Tab label="Financial Analysis" />
+          <Tab label="Planning vs Actual" />
           <Tab label="Risk Assessment" />
         </Tabs>
 
@@ -490,13 +578,19 @@ const Dashboard = () => {
                 Progress Trend
               </Typography>
               <Paper elevation={2} sx={{ p: 2 }}>
-                <CustomBarChart
-                  data={getProgressTrendData()}
-                  title="Progress Trend"
-                  xAxisKey="name"
-                  barKey={['Actual Work Done', 'Vetted Revenue']}
-                  color={['#8884d8', '#82ca9d']}
-                />
+                {getProgressTrendData().length > 0 ? (
+                  <CustomBarChart
+                    data={getProgressTrendData()}
+                    title="Progress Trend"
+                    xAxisKey="name"
+                    barKey={['Actual Work Done', 'Vetted Revenue']}
+                    color={['#8884d8', '#82ca9d']}
+                  />
+                ) : (
+                  <Alert severity="info">
+                    No progress data available for the selected project.
+                  </Alert>
+                )}
               </Paper>
             </Grid>
           </Grid>
@@ -540,6 +634,45 @@ const Dashboard = () => {
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
               <Typography variant="h6" gutterBottom>
+                Planned vs Actual Revenue
+              </Typography>
+              <Paper elevation={2} sx={{ p: 2 }}>
+                <CustomBarChart
+                  data={getPlannedVsActualData()}
+                  title="Planned vs Actual Revenue"
+                  xAxisKey="name"
+                  barKey={['Planned Revenue', 'Actual Revenue']}
+                  color={['#8884d8', '#82ca9d']}
+                />
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
+                Budget vs Actual
+              </Typography>
+              <Paper elevation={2} sx={{ p: 2 }}>
+                {getBudgetVsActualData().length > 0 ? (
+                  <CustomBarChart
+                    data={getBudgetVsActualData()}
+                    title="Budget vs Actual"
+                    xAxisKey="name"
+                    barKey={['Planned', 'Actual']}
+                    color={['#8884d8', '#82ca9d']}
+                  />
+                ) : (
+                  <Alert severity="info">
+                    No budget data available for the selected project.
+                  </Alert>
+                )}
+              </Paper>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={3}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
                 Risk Overview
               </Typography>
               <Paper elevation={2} sx={{ p: 2, textAlign: 'center' }}>
@@ -558,35 +691,41 @@ const Dashboard = () => {
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography variant="h6" gutterBottom>
-                Risk Factors
+                High Risk Projects
               </Typography>
               <Paper elevation={2} sx={{ p: 2 }}>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Project</TableCell>
-                        <TableCell>Directorate</TableCell>
-                        <TableCell>Risk Level</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {highRiskProjects.slice(0, 5).map(({ project, riskLevels }) => (
-                        <TableRow key={project.id}>
-                          <TableCell>{project.name}</TableCell>
-                          <TableCell>{project.directorate}</TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={riskLevels.overallRisk} 
-                              color="error" 
-                              size="small" 
-                            />
-                          </TableCell>
+                {highRiskProjects.length > 0 ? (
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Project</TableCell>
+                          <TableCell>Directorate</TableCell>
+                          <TableCell>Risk Level</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                      </TableHead>
+                      <TableBody>
+                        {highRiskProjects.slice(0, 5).map(({ project, riskLevels }) => (
+                          <TableRow key={project.id}>
+                            <TableCell>{project.name}</TableCell>
+                            <TableCell>{project.directorate}</TableCell>
+                            <TableCell>
+                              <Chip 
+                                label={riskLevels.overallRisk} 
+                                color="error" 
+                                size="small" 
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                ) : (
+                  <Alert severity="success">
+                    No high risk projects found. All projects are performing well.
+                  </Alert>
+                )}
               </Paper>
             </Grid>
           </Grid>
@@ -606,9 +745,9 @@ const Dashboard = () => {
               <TableCell>Directorate</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>CA Value</TableCell>
+              <TableCell>Planned Revenue</TableCell>
               <TableCell>Actual Revenue</TableCell>
-              <TableCell>Vetted Revenue</TableCell>
-              <TableCell>Amount Received</TableCell>
+              <TableCell>Variance</TableCell>
               <TableCell>Risk Level</TableCell>
             </TableRow>
           </TableHead>
@@ -619,6 +758,10 @@ const Dashboard = () => {
               .map(project => {
                 const kpis = calculateProjectKPIs(project);
                 const riskLevels = calculateRiskLevels(project, kpis);
+                const plannedRevenue = project.targets ? 
+                  project.targets.reduce((sum, target) => sum + (target.value || 0), 0) : 0;
+                const variance = plannedRevenue - (kpis.actualRevenue || 0);
+                const variancePercentage = plannedRevenue > 0 ? (variance / plannedRevenue) * 100 : 0;
                 
                 return (
                   <TableRow key={project.id}>
@@ -636,9 +779,15 @@ const Dashboard = () => {
                       />
                     </TableCell>
                     <TableCell>{formatCurrency(project.caValue || 0)}</TableCell>
+                    <TableCell>{formatCurrency(plannedRevenue)}</TableCell>
                     <TableCell>{formatCurrency(kpis.actualRevenue || 0)}</TableCell>
-                    <TableCell>{formatCurrency(kpis.vettedRevenue || 0)}</TableCell>
-                    <TableCell>{formatCurrency(kpis.amountReceived || 0)}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={`${formatCurrency(variance)} (${variancePercentage.toFixed(2)}%)`} 
+                        color={variance <= 0 ? 'success' : variance <= plannedRevenue * 0.1 ? 'warning' : 'error'}
+                        size="small"
+                      />
+                    </TableCell>
                     <TableCell>
                       <Chip 
                         label={riskLevels.overallRisk} 
