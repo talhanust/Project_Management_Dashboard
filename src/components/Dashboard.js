@@ -307,7 +307,7 @@ const Dashboard = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={2.4}>
-          <Card elevation={2} sx={{ background: 'linear-gradient(45deg, #e74c3c, 'error.main')', color: 'white' }}>
+          <Card elevation={2} sx={{ background: 'linear-gradient(45deg, #e74c3c, ${theme.palette.error.main})', color: 'white' }}>
             <CardContent>
               <Box display="flex" alignItems="center">
                 <WarningIcon sx={{ fontSize: 40, mr: 2 }} />
