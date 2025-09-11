@@ -38,8 +38,11 @@ function TabPanel(props) {
 
 const ProjectMonitoring = () => {
   const [tabValue, setTabValue] = useState(0);
-  const { projects, updateProject, addProgress, addExpenditure, formatCurrency, calculateProjectKPIs, setFilters, filters } = useApp();
+  const { projects, updateProject, addProgress, addExpenditure, formatCurrency, calculateProjectKPIs } = useApp();
   const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [reportType, setReportType] = useState('overall');
+  const [directorate, setDirectorate] = useState('All');
+  const [filteredProjects, setFilteredProjects] = useState(projects);
   const [progressData, setProgressData] = useState({
     previousMonth: {
       actualWorkDone: '',
@@ -56,15 +59,14 @@ const ProjectMonitoring = () => {
     expenditures: {}
   });
 
-  const [filteredProjects, setFilteredProjects] = useState(projects);
-
   useEffect(() => {
-    if (filters.directorate === 'All') {
+    // Filter projects based on directorate selection
+    if (directorate === 'All') {
       setFilteredProjects(projects);
     } else {
-      setFilteredProjects(projects.filter(p => p.directorate === filters.directorate));
+      setFilteredProjects(projects.filter(p => p.directorate === directorate));
     }
-  }, [filters.directorate, projects]);
+  }, [directorate, projects]);
 
   useEffect(() => {
     // Load saved progress data if available
@@ -173,11 +175,19 @@ const ProjectMonitoring = () => {
     });
   };
 
-  const handleDirectorateFilterChange = (value) => {
-    setFilters(prev => ({
-      ...prev,
-      directorate: value
-    }));
+  const handleReportTypeChange = (e) => {
+    const newReportType = e.target.value;
+    setReportType(newReportType);
+    
+    // Reset selections when changing report type
+    if (newReportType === 'overall') {
+      setDirectorate('All');
+    }
+  };
+
+  const handleDirectorateChange = (e) => {
+    const newDirectorate = e.target.value;
+    setDirectorate(newDirectorate);
   };
 
   const expenditureHeads = [
@@ -209,6 +219,44 @@ const ProjectMonitoring = () => {
         Project Monitoring
       </Typography>
 
+      {/* Add the filter controls from ExecutiveReports */}
+      <Card elevation={2} sx={{ p: 3, mb: 3 }}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth>
+              <InputLabel>Report Type</InputLabel>
+              <Select
+                value={reportType}
+                label="Report Type"
+                onChange={handleReportTypeChange}
+              >
+                <MenuItem value="overall">Overall Report</MenuItem>
+                <MenuItem value="directorate">Directorate Report</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth>
+              <InputLabel>Directorate</InputLabel>
+              <Select
+                value={directorate}
+                label="Directorate"
+                onChange={handleDirectorateChange}
+                disabled={reportType === 'overall'}
+              >
+                <MenuItem value="All">All Directorates</MenuItem>
+                <MenuItem value="North">North</MenuItem>
+                <MenuItem value="Centre">Centre</MenuItem>
+                <MenuItem value="KPK">KPK</MenuItem>
+                <MenuItem value="Baluchistan">Baluchistan</MenuItem>
+                <MenuItem value="Sindh">Sindh</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Card>
+
       <Card elevation={2}>
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="project monitoring tabs">
           <Tab label="Update Progress" />
@@ -219,23 +267,6 @@ const ProjectMonitoring = () => {
 
         <TabPanel value={tabValue} index={0}>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Filter by Directorate</InputLabel>
-                <Select
-                  value={filters.directorate}
-                  label="Filter by Directorate"
-                  onChange={(e) => handleDirectorateFilterChange(e.target.value)}
-                >
-                  <MenuItem value="All">All</MenuItem>
-                  <MenuItem value="North">North</MenuItem>
-                  <MenuItem value="Centre">Centre</MenuItem>
-                  <MenuItem value="KPK">KPK</MenuItem>
-                  <MenuItem value="Baluchistan">Baluchistan</MenuItem>
-                  <MenuItem value="Sindh">Sindh</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
             <Grid item xs={12} md={3}>
               <FormControl fullWidth margin="normal" required>
                 <InputLabel>Select Project</InputLabel>
@@ -393,26 +424,6 @@ const ProjectMonitoring = () => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Filter by Directorate</InputLabel>
-                <Select
-                  value={filters.directorate}
-                  label="Filter by Directorate"
-                  onChange={(e) => handleDirectorateFilterChange(e.target.value)}
-                >
-                  <MenuItem value="All">All</MenuItem>
-                  <MenuItem value="North">North</MenuItem>
-                  <MenuItem value="Centre">Centre</MenuItem>
-                  <MenuItem value="KPK">KPK</MenuItem>
-                  <MenuItem value="Baluchistan">Baluchistan</MenuItem>
-                  <MenuItem value="Sindh">Sindh</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-
           <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
             Progress Tracking
           </Typography>
@@ -497,26 +508,6 @@ const ProjectMonitoring = () => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={2}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Filter by Directorate</InputLabel>
-                <Select
-                  value={filters.directorate}
-                  label="Filter by Directorate"
-                  onChange={(e) => handleDirectorateFilterChange(e.target.value)}
-                >
-                  <MenuItem value="All">All</MenuItem>
-                  <MenuItem value="North">North</MenuItem>
-                  <MenuItem value="Centre">Centre</MenuItem>
-                  <MenuItem value="KPK">KPK</MenuItem>
-                  <MenuItem value="Baluchistan">Baluchistan</MenuItem>
-                  <MenuItem value="Sindh">Sindh</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-
           <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
             Financial Tracking - Section 1
           </Typography>
@@ -635,26 +626,6 @@ const ProjectMonitoring = () => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={3}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={3}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Filter by Directorate</InputLabel>
-                <Select
-                  value={filters.directorate}
-                  label="Filter by Directorate"
-                  onChange={(e) => handleDirectorateFilterChange(e.target.value)}
-                >
-                  <MenuItem value="All">All</MenuItem>
-                  <MenuItem value="North">North</MenuItem>
-                  <MenuItem value="Centre">Centre</MenuItem>
-                  <MenuItem value="KPK">KPK</MenuItem>
-                  <MenuItem value="Baluchistan">Baluchistan</MenuItem>
-                  <MenuItem value="Sindh">Sindh</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-
           <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
             KPIs Monitoring
           </Typography>
