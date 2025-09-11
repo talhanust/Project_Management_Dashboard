@@ -66,27 +66,31 @@ const Dashboard = () => {
   }, [projects, filter, selectedProject]);
 
   const calculateStats = () => {
-    const filteredProjects = filter === 'All' 
-      ? projects 
-      : projects.filter(p => p.directorate === filter);
+    let filteredProjects = projects;
     
-    const projectSpecific = selectedProject !== 'All' 
-      ? filteredProjects.filter(p => p.id === selectedProject)
-      : filteredProjects;
+    // Apply directorate filter
+    if (filter !== 'All') {
+      filteredProjects = filteredProjects.filter(p => p.directorate === filter);
+    }
+    
+    // Apply project filter
+    if (selectedProject !== 'All') {
+      filteredProjects = filteredProjects.filter(p => p.id === selectedProject);
+    }
 
-    const total = projectSpecific.length;
-    const inProgress = projectSpecific.filter(p => p.status === 'In Progress').length;
-    const completed = projectSpecific.filter(p => p.status === 'Completed').length;
-    const planning = projectSpecific.filter(p => p.status === 'Planning').length;
+    const total = filteredProjects.length;
+    const inProgress = filteredProjects.filter(p => p.status === 'In Progress').length;
+    const completed = filteredProjects.filter(p => p.status === 'Completed').length;
+    const planning = filteredProjects.filter(p => p.status === 'Planning').length;
     
-    const totalCAValue = projectSpecific.reduce((sum, p) => sum + (p.caValue || 0), 0);
+    const totalCAValue = filteredProjects.reduce((sum, p) => sum + (p.caValue || 0), 0);
     
     let totalRevenue = 0;
     let totalExpenditure = 0;
     let highRiskCount = 0;
     const highRiskProjectsList = [];
     
-    projectSpecific.forEach(project => {
+    filteredProjects.forEach(project => {
       const kpis = calculateProjectKPIs(project);
       const riskLevels = calculateRiskLevels(project, kpis);
       
@@ -114,7 +118,7 @@ const Dashboard = () => {
       totalExpenditure
     });
 
-    const sortedProjects = [...projectSpecific]
+    const sortedProjects = [...filteredProjects]
       .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
       .slice(0, 5);
 
@@ -303,7 +307,7 @@ const Dashboard = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={2.4}>
-          <Card elevation={2} sx={{ background: 'linear-gradient(45deg, #e74c3c, #ec7063)', color: 'white' }}>
+          <Card elevation={2} sx={{ background: 'linear-gradient(45deg, #e74c3c, 'error.main')', color: 'white' }}>
             <CardContent>
               <Box display="flex" alignItems="center">
                 <WarningIcon sx={{ fontSize: 40, mr: 2 }} />
