@@ -38,7 +38,7 @@ import {
   Image as ImageIcon,
   TrendingUp as TrendingUpIcon,
   ShowChart as ChartIcon,
-  Target as TargetIcon
+  Flag as FlagIcon
 } from '@mui/icons-material';
 import { useApp } from '../contexts/AppContext';
 import CustomBarChart from './BarChart';
@@ -509,7 +509,7 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={2.4}>
           <Card elevation={3}>
             <CardContent sx={{ textAlign: 'center' }}>
-              <TargetIcon color="info" sx={{ fontSize: 40, mb: 1 }} />
+               <FlagIcon color="info" sx={{ fontSize: 40, mb: 1 }} />  {/* Changed from TargetIcon to FlagIcon */}
               <Typography variant="h6" gutterBottom>
                 Planned Revenue
               </Typography>
