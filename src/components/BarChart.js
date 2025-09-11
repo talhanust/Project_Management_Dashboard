@@ -11,7 +11,17 @@ import {
 } from 'recharts';
 import { Box, Typography, Paper, useTheme } from '@mui/material';
 
-const BarChart = ({ data, title, xAxisKey, barKeys, colors, tooltipFormatter, legendFormatter }) => {
+const BarChart = ({ 
+  data, 
+  title, 
+  xAxisKey, 
+  barKeys, 
+  colors, 
+  tooltipFormatter, 
+  legendFormatter,
+  horizontal = false,
+  valueFormatter = value => value
+}) => {
   const theme = useTheme();
   
   // Default data if none provided
@@ -27,13 +37,24 @@ const BarChart = ({ data, title, xAxisKey, barKeys, colors, tooltipFormatter, le
   const chartData = data || defaultData;
   const xKey = xAxisKey || 'name';
   const bars = barKeys || ['value'];
-  const colorPalette = colors || [theme.palette.primary.main];
+  
+  // Default color palette with better distinct colors for multiple series
+  const defaultColors = [
+    theme.palette.primary.main,
+    theme.palette.secondary.main,
+    theme.palette.success.main,
+    theme.palette.warning.main,
+    theme.palette.error.main,
+    theme.palette.info.main,
+  ];
+  
+  const colorPalette = colors || defaultColors;
 
   const formatTooltipValue = (value, name) => {
     if (tooltipFormatter) {
       return tooltipFormatter(value, name);
     }
-    return [value, name];
+    return [valueFormatter(value), name];
   };
 
   const formatLegend = (value) => {
@@ -52,6 +73,7 @@ const BarChart = ({ data, title, xAxisKey, barKeys, colors, tooltipFormatter, le
         <ResponsiveContainer>
           <RechartsBarChart
             data={chartData}
+            layout={horizontal ? "vertical" : "horizontal"}
             margin={{
               top: 5,
               right: 30,
@@ -60,8 +82,17 @@ const BarChart = ({ data, title, xAxisKey, barKeys, colors, tooltipFormatter, le
             }}
           >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={xKey} />
-            <YAxis />
+            {horizontal ? (
+              <>
+                <XAxis type="number" />
+                <YAxis type="category" dataKey={xKey} width={100} />
+              </>
+            ) : (
+              <>
+                <XAxis dataKey={xKey} />
+                <YAxis />
+              </>
+            )}
             <Tooltip 
               formatter={formatTooltipValue}
             />
