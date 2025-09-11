@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -49,9 +49,42 @@ const ExecutiveReports = () => {
   const [tabValue, setTabValue] = useState(0);
   const [generateStatus, setGenerateStatus] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [filteredProjects, setFilteredProjects] = useState(projects);
+
+  useEffect(() => {
+    // Filter projects based on directorate selection
+    if (directorate === 'All') {
+      setFilteredProjects(projects);
+    } else {
+      setFilteredProjects(projects.filter(p => p.directorate === directorate));
+    }
+  }, [directorate, projects]);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+  };
+
+  const handleReportTypeChange = (e) => {
+    const newReportType = e.target.value;
+    setReportType(newReportType);
+    
+    // Reset selections when changing report type
+    if (newReportType === 'overall') {
+      setDirectorate('All');
+      setSelectedProject('All');
+    } else if (newReportType === 'directorate') {
+      setSelectedProject('All');
+    }
+  };
+
+  const handleDirectorateChange = (e) => {
+    const newDirectorate = e.target.value;
+    setDirectorate(newDirectorate);
+    
+    // Reset project selection when changing directorate
+    if (reportType === 'project') {
+      setSelectedProject('All');
+    }
   };
 
   const handleGenerateReport = () => {
@@ -481,7 +514,7 @@ const ExecutiveReports = () => {
               <Select
                 value={reportType}
                 label="Report Type"
-                onChange={(e) => setReportType(e.target.value)}
+                onChange={handleReportTypeChange}
               >
                 <MenuItem value="overall">Overall Report</MenuItem>
                 <MenuItem value="directorate">Directorate Report</MenuItem>
@@ -496,7 +529,7 @@ const ExecutiveReports = () => {
               <Select
                 value={directorate}
                 label="Directorate"
-                onChange={(e) => setDirectorate(e.target.value)}
+                onChange={handleDirectorateChange}
                 disabled={reportType === 'overall'}
               >
                 <MenuItem value="All">All Directorates</MenuItem>
@@ -519,14 +552,11 @@ const ExecutiveReports = () => {
                 disabled={reportType !== 'project'}
               >
                 <MenuItem value="All">All Projects</MenuItem>
-                {projects
-                  .filter(p => directorate === 'All' || p.directorate === directorate)
-                  .map(project => (
-                    <MenuItem key={project.id} value={project.id}>
-                      {project.name}
-                    </MenuItem>
-                  ))
-                }
+                {filteredProjects.map(project => (
+                  <MenuItem key={project.id} value={project.id}>
+                    {project.name}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Grid>
